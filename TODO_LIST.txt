@@ -1,0 +1,14 @@
+-Finish Presets
+	Move from old to new
+
+-Implement the Bounce to the new
+
+-Find max speed (Requires Testing)
+	Range of the D-Pad values
+
+-Find the light colors (values)
+
+-Implement the patient control
+
+*Control Manual (Last Thing)
+	Sheet Paper explaining the controls

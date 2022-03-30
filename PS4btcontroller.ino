@@ -13,7 +13,7 @@ BTD Btd(&Usb);
 PS4BT PS4(&Btd, PAIR);
 
 char state = 0;
-bool Change = false;
+bool Change = true;
 
 void setup() {
   Serial.begin(19200);
@@ -67,27 +67,27 @@ void loop() {
 }
 
 void CheckForChange() {
-  if((abs(PS4.getAnalogHat(LeftHatX)) > 5) && (abs(PS4.getAnalogHat(LeftHatY)) > 5)){
+  if(((abs(PS4.getAnalogHat(LeftHatX)) > 5) && (abs(PS4.getAnalogHat(LeftHatY)) > 5)) && (state != 0)){
     state = 0;
     Reset();
   }
-  if(PS4.getButtonClick(SQUARE)){
+  if((PS4.getButtonClick(SQUARE)) && (state != 1)){
     state = 1;
     Reset();
   }
-  if(PS4.getButtonClick(CIRCLE)){
+  if((PS4.getButtonClick(CIRCLE))  && (state != 2)){
      state = 2;
      Reset();
   }
-  if(PS4.getButtonClick(CROSS)){
+  if((PS4.getButtonClick(CROSS))  && (state != 3)){
      state = 3;
      Reset();
   }
-  if(PS4.getButtonClick(TRIANGLE)){
+  if((PS4.getButtonClick(TRIANGLE))  && (state != 4)){
      state = 4;
      Reset();
   }
-  if(PS4.getButtonClick(TOUCHPAD)){
+  if((PS4.getButtonClick(TOUCHPAD))  && (state != 5)){
     state = 5;
     Reset();
   }
@@ -131,10 +131,13 @@ void Reset() {
     }
     DriverPinOut();
   }
+  Change = false;
 }
 
 void JoystickMovement() {
-  while (
+  while (Change) {
+    
+  }
 }
 
 void FRMovement() {
