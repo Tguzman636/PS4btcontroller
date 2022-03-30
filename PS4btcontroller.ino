@@ -12,9 +12,8 @@ BTD Btd(&Usb);
 
 PS4BT PS4(&Btd, PAIR);
 
-unsigned char red = 0, green = 0, blue = 0;
-boolean lRed = false, lGreen = false, lBlue = false, printRGB = false;
-char state = 0; // 0 = Accelerometer controlled, 1 = RS + LT
+char state = 0;
+bool Change = false;
 
 void setup() {
   Serial.begin(19200);
@@ -64,30 +63,34 @@ void loop() {
         default:
           break;
       }
-      if((abs(PS4.getAnalogHat(LeftHatX)) > 5) && (abs(PS4.getAnalogHat(LeftHatY)) > 5)){
-         state = 0;
-         Reset();
-      }
-      if(PS4.getButtonClick(SQUARE)){
-         state = 1;
-         Reset();
-      }
-      if(PS4.getButtonClick(CIRCLE)){
-         state = 2;
-         Reset();
-      }
-      if(PS4.getButtonClick(CROSS)){
-         state = 3;
-         Reset();
-      }
-      if(PS4.getButtonClick(TRIANGLE)){
-         state = 4;
-         Reset();
-      }
-      if(PS4.getButtonClick(TOUCHPAD)){
-        state = 5;
-        Reset();
-      }
+  }
+}
+
+void CheckForChange() {
+  if((abs(PS4.getAnalogHat(LeftHatX)) > 5) && (abs(PS4.getAnalogHat(LeftHatY)) > 5)){
+    state = 0;
+    Reset();
+  }
+  if(PS4.getButtonClick(SQUARE)){
+    state = 1;
+    Reset();
+  }
+  if(PS4.getButtonClick(CIRCLE)){
+     state = 2;
+     Reset();
+  }
+  if(PS4.getButtonClick(CROSS)){
+     state = 3;
+     Reset();
+  }
+  if(PS4.getButtonClick(TRIANGLE)){
+     state = 4;
+     Reset();
+  }
+  if(PS4.getButtonClick(TOUCHPAD)){
+    state = 5;
+    Reset();
+  }
 }
 
 void OverflowCheck() {
@@ -131,5 +134,9 @@ void Reset() {
 }
 
 void JoystickMovement() {
-  
+  while (
+}
+
+void FRMovement() {
+  //Test
 }
