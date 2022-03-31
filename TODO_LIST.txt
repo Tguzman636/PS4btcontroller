@@ -1,5 +1,6 @@
 -Finish Presets
 	Move from old to new
+	^(DONE - NEEDS TESTING - WATCH OUT FOR xPos and yPos direction)
 
 -Implement the Bounce to the new
 

@@ -13,7 +13,8 @@ BTD Btd(&Usb);
 PS4BT PS4(&Btd, PAIR);
 
 char state = 0;
-bool Change = true;
+char Motion = 0;
+bool Change = true; // Check if a state change occurs
 
 void setup() {
   Serial.begin(19200);
@@ -91,6 +92,12 @@ void CheckForChange() {
     state = 5;
     Reset();
   }
+  /*if(PS4.DPAD){
+    speedd++;
+  }
+  if(PS4.DPAD){
+    speedd--;
+  }*/
 }
 
 void OverflowCheck() {
@@ -103,6 +110,7 @@ void OverflowCheck() {
 void DriverPinOut() {
   analogWrite(driverPin1, xPos);
   analogWrite(driverPin2, yPos);
+  delay(10);
 }
 
 void Reset() {
@@ -136,10 +144,157 @@ void Reset() {
 
 void JoystickMovement() {
   while (Change) {
-    
+    if (PS4.getAnalogHat(LeftHatX) > 137) {
+      xPos += speedd;
+    }
+    if (PS4.getAnalogHat(LeftHatX) < 117) {
+      xPos -= speedd;
+    }
+    if (PS4.getAnalogHat(LeftHatY) > 137) {
+      yPos += speedd;
+    }
+    if (PS4.getAnalogHat(LeftHatY) < 117) {
+      yPos -= speedd;
+    }
+    OverflowCheck();
+    CheckForChange();
+    if (Change) {
+      DriverPinOut();
+    }
   }
 }
 
-void FRMovement() {
-  //Test
+void FBMovement() {
+  Motion = 0;
+  while (Change) {
+    switch(Motion) {
+      case 0:   // Nose Down
+        xPos -= speedd;
+        yPos -= speedd;
+        OverflowCheck();
+        if ((xPos == 0) && (yPos == 0)) {
+          Motion = 1;
+        }
+        break;
+      case 1:   // Nose Up
+        xPos += speedd;
+        yPos += speedd;
+        OverflowCheck();
+        if ((xPos == 255) && (yPos == 255)) {
+          Motion = 0;
+        }
+        break;
+      case 2:   // Left Orientated
+        xPos += speedd;
+        yPos -= speedd;
+        OverflowCheck();
+        if ((xPos == 255) && (yPos == 0)) {
+          //Motion = #;
+        }
+        break;
+      case 3:   // Right Orientated
+        xPos -= speedd;
+        yPos += speedd;
+        OverflowCheck();
+        if ((xPos == 0) && (yPos == 255)) {
+          //Motion = #;
+        }
+        break;
+    }
+    CheckForChange();
+    if (Change) {
+      DriverPinOut();
+    }
+  }
+  Change = true;
+}
+
+void LRMovement() {
+  Motion = 2;
+  while (Change) {
+    switch(Motion) {
+      case 0:   // Nose Down
+        xPos -= speedd;
+        yPos -= speedd;
+        OverflowCheck();
+        if ((xPos == 0) && (yPos == 0)) {
+          //Motion = #;
+        }
+        break;
+      case 1:   // Nose Up
+        xPos += speedd;
+        yPos += speedd;
+        OverflowCheck();
+        if ((xPos == 255) && (yPos == 255)) {
+          //Motion = #;
+        }
+        break;
+      case 2:   // Left Orientated
+        xPos += speedd;
+        yPos -= speedd;
+        OverflowCheck();
+        if ((xPos == 255) && (yPos == 0)) {
+          Motion = 3;
+        }
+        break;
+      case 3:   // Right Orientated
+        xPos -= speedd;
+        yPos += speedd;
+        OverflowCheck();
+        if ((xPos == 0) && (yPos == 255)) {
+          Motion = 2;
+        }
+        break;
+    }
+    CheckForChange();
+    if (Change) {
+      DriverPinOut();
+    }
+  }
+  Change = true;
+}
+
+void CircularMovement() {
+  Motion = 0;
+  while (Change) {
+    switch(Motion) {
+      case 0:   // Nose Down
+        xPos -= speedd;
+        yPos -= speedd;
+        OverflowCheck();
+        if ((xPos == 0) && (yPos == 0)) {
+          Motion = 2;
+        }
+        break;
+      case 1:   // Nose Up
+        xPos += speedd;
+        yPos += speedd;
+        OverflowCheck();
+        if ((xPos == 255) && (yPos == 255)) {
+          Motion = 3;
+        }
+        break;
+      case 2:   // Left Orientated
+        xPos += speedd;
+        yPos -= speedd;
+        OverflowCheck();
+        if ((xPos == 255) && (yPos == 0)) {
+          Motion = 1;
+        }
+        break;
+      case 3:   // Right Orientated
+        xPos -= speedd;
+        yPos += speedd;
+        OverflowCheck();
+        if ((xPos == 0) && (yPos == 255)) {
+          Motion = 0;
+        }
+        break;
+    }
+    CheckForChange();
+    if (Change) {
+      DriverPinOut();
+    }
+  }
+  Change = true;
 }
