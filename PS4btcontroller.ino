@@ -6,25 +6,12 @@
 #include <spi4teensy3.h>
 #endif
 
+#define driverPin1 5
+#define driverPin2 6
+
 USB Usb;
-
 BTD Btd(&Usb);
-
 PS4BT PS4(&Btd, PAIR);
-
-char state = 0;
-char Motion = 0;
-bool Change = true; // Check if a state change occurs
-
-void setup() {
-  Serial.begin(19200);
-  while (!Serial); // Wait for serial port to connect - used on Leonardo, Teensy and other boards with built-in USB CDC serial connection
-  if (Usb.Init() == -1) {
-    Serial.print(F("\r\nOSC did not start"));
-    while (1); // Halt
-  }
-  Serial.print(F("\r\nPS4 Bluetooth Library Started"));
-}
 
 /*
 States (COLORS?)
@@ -37,11 +24,34 @@ States (COLORS?)
 5 - Patient Mode    (ORANGE)  Touchpad
 */
 
+char state = 0;     // State Machine for mode method
+char Motion = 0;    // State Machone for motion direction
+bool Change = true; // Check if a state change occurs
+
+int xPos = 127;     // Analog Write Vals
+int yPos = 127;     // Analog Write Vals
+int speedd = 6;     // Speed
+int timing = 10;    // Timing [Delay] within the Action function (Not sure if we need it)
+int SpeeddMin = 1;  // Speed Min
+int SpeeddMax = 10; // Speed Max
+
+void setup() {
+  Serial.begin(19200);
+  while (!Serial); // Wait for serial port to connect - used on Leonardo, Teensy and other boards with built-in USB CDC serial connection
+  if (Usb.Init() == -1) {
+    Serial.print(F("\r\nOSC did not start"));
+    while (1); // Halt
+  }
+  Serial.print(F("\r\nPS4 Bluetooth Library Started"));
+
+  pinMode(driverPin1, OUTPUT);
+  pinMode(driverPin2, OUTPUT);
+}
+
 void loop() {
   Usb.Task();
 
   if (PS4.connected()) {
-      //PS4.setLed(red, green, blue);
       switch(state){
         case 0:
           JoystickMovement();
@@ -70,34 +80,46 @@ void loop() {
 void CheckForChange() {
   if(((abs(PS4.getAnalogHat(LeftHatX)) > 5) && (abs(PS4.getAnalogHat(LeftHatY)) > 5)) && (state != 0)){
     state = 0;
+    //PS4.setLed(red, green, blue);
     Reset();
   }
   if((PS4.getButtonClick(SQUARE)) && (state != 1)){
     state = 1;
+    //PS4.setLed(red, green, blue);
     Reset();
   }
   if((PS4.getButtonClick(CIRCLE))  && (state != 2)){
      state = 2;
+     //PS4.setLed(red, green, blue);
      Reset();
   }
   if((PS4.getButtonClick(CROSS))  && (state != 3)){
      state = 3;
+     //PS4.setLed(red, green, blue);
      Reset();
   }
   if((PS4.getButtonClick(TRIANGLE))  && (state != 4)){
      state = 4;
+     //PS4.setLed(red, green, blue);
      Reset();
   }
   if((PS4.getButtonClick(TOUCHPAD))  && (state != 5)){
     state = 5;
+    //PS4.setLed(red, green, blue);
     Reset();
   }
-  /*if(PS4.DPAD){
+  if(PS4.checkDPad(UP)){
     speedd++;
+    if(speedd > SpeeddMax) {
+      speedd = SpeeddMax;
+    }
   }
-  if(PS4.DPAD){
+  if(PS4.checkDPad(DOWN)){
     speedd--;
-  }*/
+    if(speedd < SpeeddMin) {
+      speedd = SpeeddMin;
+    }
+  }
 }
 
 void OverflowCheck() {
@@ -110,7 +132,7 @@ void OverflowCheck() {
 void DriverPinOut() {
   analogWrite(driverPin1, xPos);
   analogWrite(driverPin2, yPos);
-  delay(10);
+  delay(timing);
 }
 
 void Reset() {
@@ -297,4 +319,24 @@ void CircularMovement() {
     }
   }
   Change = true;
+}
+
+void PatientMode() {
+  while(Change) {
+    // Detect Patient Button Press similiar to Joystick
+    CheckForChange();
+    if (Change) {
+      DriverPinOut();
+    }
+  }
+}
+
+void BounceMovement() {
+  while(Change){
+    // Input Bounce Code
+    CheckForChange();
+    /*if (Change) {
+      BounceReset();
+    }*/
+  }
 }
