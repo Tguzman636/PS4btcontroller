@@ -24,8 +24,8 @@ States (COLORS?)
 5 - Patient Mode    (ORANGE)  Touchpad
 */
 
-char state = 0;     // State Machine for mode method
-char Motion = 0;    // State Machone for motion direction
+int state = 0;     // State Machine for mode method
+int Motion = 0;    // State Machone for motion direction
 bool Change = true; // Check if a state change occurs
 
 int xPos = 127;     // Analog Write Vals
@@ -36,8 +36,10 @@ int SpeeddMin = 1;  // Speed Min
 int SpeeddMax = 10; // Speed Max
 
 void setup() {
-  Serial.begin(19200);
+  Serial.begin(115200);
+#if !defined(__MIPSEL__)
   while (!Serial); // Wait for serial port to connect - used on Leonardo, Teensy and other boards with built-in USB CDC serial connection
+#endif
   if (Usb.Init() == -1) {
     Serial.print(F("\r\nOSC did not start"));
     while (1); // Halt
@@ -50,8 +52,7 @@ void setup() {
 
 void loop() {
   Usb.Task();
-
-  if (PS4.connected()) {
+  Serial.print("\r\nLooping");
       switch(state){
         case 0:
           JoystickMovement();
@@ -74,51 +75,63 @@ void loop() {
         default:
           break;
       }
-  }
 }
 
 void CheckForChange() {
-  if(((abs(PS4.getAnalogHat(LeftHatX)) > 5) && (abs(PS4.getAnalogHat(LeftHatY)) > 5)) && (state != 0)){
+  Serial.print("State: ");
+  Serial.println(state);
+  Usb.Task();
+  if (PS4.connected()) {
+  if(((abs(PS4.getAnalogHat(LeftHatX) - 127) > 15) && (abs(PS4.getAnalogHat(LeftHatY) - 127) > 15)) && (state != 0)){
     state = 0;
+    Serial.println("Joystick Mode Activated");
     //PS4.setLed(red, green, blue);
     Reset();
   }
   if((PS4.getButtonClick(SQUARE)) && (state != 1)){
     state = 1;
     //PS4.setLed(red, green, blue);
+    Serial.println("Circular Mode Activated");
     Reset();
-  }
+  } else
   if((PS4.getButtonClick(CIRCLE))  && (state != 2)){
      state = 2;
      //PS4.setLed(red, green, blue);
+     Serial.println("Left/Right Mode Activated");
      Reset();
-  }
+  } else
   if((PS4.getButtonClick(CROSS))  && (state != 3)){
      state = 3;
      //PS4.setLed(red, green, blue);
+     Serial.println("Front/Back Mode Activated");
      Reset();
-  }
+  } else
   if((PS4.getButtonClick(TRIANGLE))  && (state != 4)){
      state = 4;
      //PS4.setLed(red, green, blue);
+     Serial.println("Bounce Mode Activated");
      Reset();
-  }
+  } else
   if((PS4.getButtonClick(TOUCHPAD))  && (state != 5)){
     state = 5;
     //PS4.setLed(red, green, blue);
+    Serial.println("Patient Mode Activated");
     Reset();
   }
-  if(PS4.checkDPad(UP)){
+  /*
+  if(PS4.checkDpad(UP)){
     speedd++;
     if(speedd > SpeeddMax) {
       speedd = SpeeddMax;
     }
   }
-  if(PS4.checkDPad(DOWN)){
+  if(PS4.checkDpad(DOWN)){
     speedd--;
     if(speedd < SpeeddMin) {
       speedd = SpeeddMin;
     }
+  }
+ */
   }
 }
 
@@ -186,7 +199,7 @@ void JoystickMovement() {
   }
 }
 
-void FBMovement() {
+void FRMovement() {
   Motion = 0;
   while (Change) {
     switch(Motion) {
@@ -329,6 +342,7 @@ void PatientMode() {
       DriverPinOut();
     }
   }
+  Change = true;
 }
 
 void BounceMovement() {
@@ -339,4 +353,5 @@ void BounceMovement() {
       BounceReset();
     }*/
   }
+  Change = true;
 }
