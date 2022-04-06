@@ -1,7 +1,7 @@
 #include <PS4BT.h>
 #include <usbhub.h>
 #include <math.h>
-
+#include <SPI.h>
 #ifdef dobogusinclude
 #include <spi4teensy3.h>
 #endif
@@ -11,7 +11,7 @@
 
 USB Usb;
 BTD Btd(&Usb);
-PS4BT PS4(&Btd, PAIR);
+PS4BT PS4(&Btd);
 
 /*
 States (COLORS?)
@@ -30,8 +30,8 @@ bool Change = true; // Check if a state change occurs
 
 int xPos = 127;     // Analog Write Vals
 int yPos = 127;     // Analog Write Vals
-int speedd = 6;     // Speed
-int timing = 10;    // Timing [Delay] within the Action function (Not sure if we need it)
+int speedd = 1;     // Speed
+int timing = 3;    // Timing [Delay] within the Action function (Not sure if we need it)
 int SpeeddMin = 1;  // Speed Min
 int SpeeddMax = 10; // Speed Max
 
@@ -41,10 +41,10 @@ void setup() {
   while (!Serial); // Wait for serial port to connect - used on Leonardo, Teensy and other boards with built-in USB CDC serial connection
 #endif
   if (Usb.Init() == -1) {
-    Serial.print(F("\r\nOSC did not start"));
+    //Serial.print(F("\r\nOSC did not start"));
     while (1); // Halt
   }
-  Serial.print(F("\r\nPS4 Bluetooth Library Started"));
+  //Serial.print(F("\r\nPS4 USB Library Started"));
 
   pinMode(driverPin1, OUTPUT);
   pinMode(driverPin2, OUTPUT);
@@ -52,7 +52,7 @@ void setup() {
 
 void loop() {
   Usb.Task();
-  Serial.print("\r\nLooping");
+  ////Serial.print("\r\nLooping");
       switch(state){
         case 0:
           JoystickMovement();
@@ -78,44 +78,44 @@ void loop() {
 }
 
 void CheckForChange() {
-  Serial.print("State: ");
-  Serial.println(state);
+  //Serial.print("State: ");
+  //Serial.println(state);
   Usb.Task();
   if (PS4.connected()) {
   if(((abs(PS4.getAnalogHat(LeftHatX) - 127) > 15) && (abs(PS4.getAnalogHat(LeftHatY) - 127) > 15)) && (state != 0)){
     state = 0;
-    Serial.println("Joystick Mode Activated");
+    //Serial.println("Joystick Mode Activated");
     //PS4.setLed(red, green, blue);
     Reset();
   }
   if((PS4.getButtonClick(SQUARE)) && (state != 1)){
     state = 1;
     //PS4.setLed(red, green, blue);
-    Serial.println("Circular Mode Activated");
+    //Serial.println("Circular Mode Activated");
     Reset();
   } else
   if((PS4.getButtonClick(CIRCLE))  && (state != 2)){
      state = 2;
      //PS4.setLed(red, green, blue);
-     Serial.println("Left/Right Mode Activated");
+     //Serial.println("Left/Right Mode Activated");
      Reset();
   } else
   if((PS4.getButtonClick(CROSS))  && (state != 3)){
      state = 3;
      //PS4.setLed(red, green, blue);
-     Serial.println("Front/Back Mode Activated");
+     //Serial.println("Front/Back Mode Activated");
      Reset();
   } else
   if((PS4.getButtonClick(TRIANGLE))  && (state != 4)){
      state = 4;
      //PS4.setLed(red, green, blue);
-     Serial.println("Bounce Mode Activated");
+     //Serial.println("Bounce Mode Activated");
      Reset();
   } else
   if((PS4.getButtonClick(TOUCHPAD))  && (state != 5)){
     state = 5;
     //PS4.setLed(red, green, blue);
-    Serial.println("Patient Mode Activated");
+    //Serial.println("Patient Mode Activated");
     Reset();
   }
   /*
