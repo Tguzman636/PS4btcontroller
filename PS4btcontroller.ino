@@ -2,6 +2,7 @@
 #include <usbhub.h>
 #include <math.h>
 #include <SPI.h>
+#include <Stepper.h>
 #ifdef dobogusinclude
 #include <spi4teensy3.h>
 #endif
@@ -11,7 +12,9 @@
 
 USB Usb;
 BTD Btd(&Usb);
-PS4BT PS4(&Btd);
+
+//PS4BT PS4(&Btd, PAIR);  // Pairing
+PS4BT PS4(&Btd);        // Already Paired
 
 /*
 States (COLORS?)
@@ -24,6 +27,20 @@ States (COLORS?)
 5 - Patient Mode    (ORANGE)  Touchpad
 */
 
+// Bouncing Variables
+#define buttonPin 4
+#define motorStepPin 11
+#define motorDirPin 10
+
+int btnState = 0;
+int steps = 200;
+int motorSpeed = 2000;
+Stepper bbStepper(steps, 10, 11);
+
+// Hall Effect Sensor
+#define hallSensor 2
+
+// Robotic
 int state = 0;     // State Machine for mode method
 int Motion = 0;    // State Machone for motion direction
 bool Change = true; // Check if a state change occurs
@@ -31,9 +48,12 @@ bool Change = true; // Check if a state change occurs
 int xPos = 127;     // Analog Write Vals
 int yPos = 127;     // Analog Write Vals
 int speedd = 1;     // Speed
-int timing = 3;    // Timing [Delay] within the Action function (Not sure if we need it)
+int timing = 4;    // Timing [Delay] within the Action function (Not sure if we need it)
 int SpeeddMin = 1;  // Speed Min
 int SpeeddMax = 10; // Speed Max
+int AngleMin = 0;
+int AngleMax = 255-64; // Max Angle
+int counter = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -48,6 +68,14 @@ void setup() {
 
   pinMode(driverPin1, OUTPUT);
   pinMode(driverPin2, OUTPUT);
+  analogWrite(driverPin1, xPos);
+  analogWrite(driverPin2, yPos);
+  bbStepper.setSpeed(motorSpeed);
+  pinMode(buttonPin, INPUT);
+  pinMode(motorStepPin, OUTPUT);
+  pinMode(motorDirPin, OUTPUT);
+  pinMode(hallSensor, INPUT);
+  bbStepper.step(0);
 }
 
 void loop() {
@@ -136,10 +164,10 @@ void CheckForChange() {
 }
 
 void OverflowCheck() {
-  if (yPos < 0) {yPos = 0;}
-  if (xPos < 0) {xPos = 0;}
-  if (yPos > 255) {yPos = 255;}
-  if (xPos > 255) {xPos = 255;}
+    if (yPos < 0) {yPos = 0;}
+    if (xPos < 0) {xPos = 0;}
+    if (yPos > 255) {yPos = 255;}
+    if (xPos > 255) {xPos = 255;} 
 }
 
 void DriverPinOut() {
@@ -149,7 +177,7 @@ void DriverPinOut() {
 }
 
 void Reset() {
-  while((xPos != 127) && (yPos != 127)) {
+  while((xPos != 127) || (yPos != 127)) {
     if (xPos < 127) {
       xPos += speedd;
       if (xPos > 127) {
@@ -174,21 +202,35 @@ void Reset() {
     }
     DriverPinOut();
   }
+  Serial.print("Final Xpos:");
+  Serial.println(xPos);
+  Serial.print("Final Ypos:");
+  Serial.println(yPos);
   Change = false;
 }
 
 void JoystickMovement() {
   while (Change) {
     if (PS4.getAnalogHat(LeftHatX) > 137) {
-      xPos += speedd;
+      if ((xPos + yPos) < (185*2)) {
+        xPos += speedd;
+      }
+      yPos -= speedd;
     }
     if (PS4.getAnalogHat(LeftHatX) < 117) {
+      if ((xPos + yPos) < (185*2)) {
+        yPos += speedd;
+      }
       xPos -= speedd;
     }
     if (PS4.getAnalogHat(LeftHatY) > 137) {
-      yPos += speedd;
+      if ((xPos + yPos) < (185*2)) {
+        xPos += speedd;
+        yPos += speedd;
+      }
     }
     if (PS4.getAnalogHat(LeftHatY) < 117) {
+      xPos -= speedd;
       yPos -= speedd;
     }
     OverflowCheck();
@@ -207,23 +249,25 @@ void FRMovement() {
         xPos -= speedd;
         yPos -= speedd;
         OverflowCheck();
-        if ((xPos == 0) && (yPos == 0)) {
+        if ((xPos == AngleMin) && (yPos == AngleMin)) {
           Motion = 1;
+          delay(2000);
         }
         break;
       case 1:   // Nose Up
         xPos += speedd;
         yPos += speedd;
         OverflowCheck();
-        if ((xPos == 255) && (yPos == 255)) {
+        if ((xPos == AngleMax) && (yPos == AngleMax)) {
           Motion = 0;
+          delay(2000);
         }
         break;
       case 2:   // Left Orientated
         xPos += speedd;
         yPos -= speedd;
         OverflowCheck();
-        if ((xPos == 255) && (yPos == 0)) {
+        if ((xPos == AngleMax) && (yPos == AngleMin)) {
           //Motion = #;
         }
         break;
@@ -231,7 +275,7 @@ void FRMovement() {
         xPos -= speedd;
         yPos += speedd;
         OverflowCheck();
-        if ((xPos == 0) && (yPos == 255)) {
+        if ((xPos == AngleMin) && (yPos == AngleMax)) {
           //Motion = #;
         }
         break;
@@ -270,6 +314,7 @@ void LRMovement() {
         OverflowCheck();
         if ((xPos == 255) && (yPos == 0)) {
           Motion = 3;
+          delay(2000);
         }
         break;
       case 3:   // Right Orientated
@@ -278,6 +323,7 @@ void LRMovement() {
         OverflowCheck();
         if ((xPos == 0) && (yPos == 255)) {
           Motion = 2;
+          delay(2000);
         }
         break;
     }
@@ -292,6 +338,10 @@ void LRMovement() {
 void CircularMovement() {
   Motion = 0;
   while (Change) {
+    Serial.print(" Xpos:");
+  Serial.println(xPos);
+  Serial.print(" Ypos:");
+  Serial.println(yPos);
     switch(Motion) {
       case 0:   // Nose Down
         xPos -= speedd;
@@ -299,30 +349,50 @@ void CircularMovement() {
         OverflowCheck();
         if ((xPos == 0) && (yPos == 0)) {
           Motion = 2;
+          delay(2000);
         }
         break;
       case 1:   // Nose Up
-        xPos += speedd;
+        counter++;
+        if (counter == 3) {
+          xPos -= speedd;
+          counter = 0;
+        }
         yPos += speedd;
         OverflowCheck();
-        if ((xPos == 255) && (yPos == 255)) {
+        if (xPos < AngleMax) {
+          xPos = AngleMax;
+        }
+        if (yPos > AngleMax) {
+          yPos = AngleMax;
+        }
+        if ((xPos == AngleMax) && (yPos == AngleMax)) {
           Motion = 3;
+          counter = 0;
+          delay(2000);
         }
         break;
-      case 2:   // Left Orientated
+      case 2:   // Right Orientated
         xPos += speedd;
         yPos -= speedd;
         OverflowCheck();
         if ((xPos == 255) && (yPos == 0)) {
           Motion = 1;
+          delay(2000);
         }
         break;
-      case 3:   // Right Orientated
+      case 3:   // Left Orientated
+        counter++;
+        if (counter == 3) {
+          yPos += speedd;
+          counter = 0;
+        }
         xPos -= speedd;
-        yPos += speedd;
         OverflowCheck();
         if ((xPos == 0) && (yPos == 255)) {
           Motion = 0;
+          counter = 0;
+          delay(2000);
         }
         break;
     }
@@ -347,11 +417,12 @@ void PatientMode() {
 
 void BounceMovement() {
   while(Change){
-    // Input Bounce Code
+    Serial.println("this is suppose to be bouncing");
     CheckForChange();
-    /*if (Change) {
-      BounceReset();
-    }*/
+    if (Change) {
+      bbStepper.step(steps);
+    }
   }
+  bbStepper.step(0);
   Change = true;
 }
