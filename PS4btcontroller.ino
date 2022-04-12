@@ -13,8 +13,8 @@
 USB Usb;
 BTD Btd(&Usb);
 
-//PS4BT PS4(&Btd, PAIR);  // Pairing
-PS4BT PS4(&Btd);        // Already Paired
+PS4BT PS4(&Btd, PAIR);  // Pairing
+//PS4BT PS4(&Btd);        // Already Paired
 
 /*
 States (COLORS?)
@@ -54,6 +54,7 @@ int SpeeddMax = 10; // Speed Max
 int AngleMin = 0;
 int AngleMax = 255-64; // Max Angle
 int counter = 0;
+int delayer = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -171,9 +172,13 @@ void OverflowCheck() {
 }
 
 void DriverPinOut() {
-  analogWrite(driverPin1, xPos);
-  analogWrite(driverPin2, yPos);
-  delay(timing);
+  for (int i=0; i <= delayer ; i++) {
+    if (i == delayer) {
+      analogWrite(driverPin1, xPos);
+      analogWrite(driverPin2, yPos);
+      delay(timing);
+    }
+  }
 }
 
 void Reset() {
