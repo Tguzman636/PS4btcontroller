@@ -13,8 +13,8 @@
 USB Usb;
 BTD Btd(&Usb);
 
-PS4BT PS4(&Btd, PAIR);  // Pairing
-//PS4BT PS4(&Btd);        // Already Paired
+//PS4BT PS4(&Btd, PAIR);  // Pairing
+PS4BT PS4(&Btd);        // Already Paired
 
 /*
 States (COLORS?)
@@ -55,6 +55,7 @@ int AngleMin = 0;
 int AngleMax = 255-64; // Max Angle
 int counter = 0;
 int delayer = 0;
+bool runningRandomMotion = true;
 
 void setup() {
   Serial.begin(115200);
@@ -96,7 +97,8 @@ void loop() {
           FRMovement();
           break;
         case 4:
-          BounceMovement();
+          //BounceMovement();
+          RandomMovement();
           break;
         case 5:
           PatientMode();
@@ -172,12 +174,20 @@ void OverflowCheck() {
 }
 
 void DriverPinOut() {
-  for (int i=0; i <= delayer ; i++) {
-    if (i == delayer) {
-      analogWrite(driverPin1, xPos);
-      analogWrite(driverPin2, yPos);
-      delay(timing);
+  if (state != 0) {
+    for (int i=0; i <= delayer ; i++) {
+      if (i == delayer) {
+        analogWrite(driverPin1, xPos);
+        analogWrite(driverPin2, yPos);
+        delay(timing);
+      } else {
+        delay(timing);
+      }
     }
+  } else {
+    analogWrite(driverPin1, xPos);
+    analogWrite(driverPin2, yPos);
+    delay(timing);
   }
 }
 
@@ -343,10 +353,6 @@ void LRMovement() {
 void CircularMovement() {
   Motion = 0;
   while (Change) {
-    Serial.print(" Xpos:");
-  Serial.println(xPos);
-  Serial.print(" Ypos:");
-  Serial.println(yPos);
     switch(Motion) {
       case 0:   // Nose Down
         xPos -= speedd;
@@ -430,4 +436,64 @@ void BounceMovement() {
   }
   bbStepper.step(0);
   Change = true;
+}
+
+void RandomMovement() {
+  Motion = 0;
+    randomSeed(millis());  // can move this line to setup
+    while (Change) {
+        if (random(2) == -1) { // has 50/50 chance of occuring. If satisfied, will do rocking motion
+
+        }
+        else { // will do a single tilt in random direction
+            Motion = random(4);  // motion = 0, 1, 2, or 3. # dictates which direction base will tilt
+            runningRandomMotion = true;
+            while (runningRandomMotion) {
+                switch (Motion) {
+                    case 0:  //Tilt left
+                        xPos -= speedd;
+                        yPos += speedd;
+                        OverflowCheck();
+                        if ((xPos == 0) && (yPos == 255)) {
+                            // get out of this case and restart RandomMovement
+                            runningRandomMotion = false;
+                        }
+                        break;
+                    case 1:  //Tilt right
+                        xPos += speedd;
+                        yPos -= speedd;
+                        OverflowCheck();
+                        if ((xPos == 255) && (yPos == 0)) {
+                            // get out of this case and restart RandomMovement
+                            runningRandomMotion = false;
+                        }
+                        break;
+                    case 2:  //Tilt forward
+                        xPos -= speedd;
+                        yPos -= speedd;
+                        OverflowCheck();
+                        if ((xPos == AngleMin) && (yPos == AngleMin)) {
+                            // get out of this case and restart RandomMovement
+                            runningRandomMotion = false;
+                        }
+                        break;
+                    case 3:  //Tilt back
+                        xPos += speedd;
+                        yPos += speedd;
+                        OverflowCheck();
+                        if ((xPos == AngleMax) && (yPos == AngleMax)) {
+                            // get out of this case and restart RandomMovement
+                            runningRandomMotion = false;
+                        }
+                        break;
+                }
+                CheckForChange();
+            if (Change){
+                DriverPinOut();
+            }
+            }
+        }
+    Reset();
+    }
+    Change = true;
 }
