@@ -56,6 +56,8 @@ int AngleMax = 255-64; // Max Angle
 int counter = 0;
 int delayer = 0;
 bool runningRandomMotion = true;
+bool doingAltTilt = true;
+int reRockProb = 70;
 
 void setup() {
   Serial.begin(115200);
@@ -78,6 +80,7 @@ void setup() {
   pinMode(motorDirPin, OUTPUT);
   pinMode(hallSensor, INPUT);
   bbStepper.step(0);
+  randomSeed(millis());  // can move this line to setup
 }
 
 void loop() {
@@ -438,62 +441,148 @@ void BounceMovement() {
   Change = true;
 }
 
+void OverflowCheckBackwards() {
+  if (xPos > AngleMax){
+    xPos = AngleMax;
+  }
+  if (yPos > AngleMax){
+    yPos = AngleMax;
+  }
+}
+
 void RandomMovement() {
   Motion = 0;
-    randomSeed(millis());  // can move this line to setup
-    while (Change) {
-        if (random(2) == -1) { // has 50/50 chance of occuring. If satisfied, will do rocking motion
+  while (Change) {
+    runningRandomMotion = true;
+    if (random(2) == 1) { // has 50/50 chance of occuring. If satisfied, will do rocking motion
+      Motion = random(2); // Motion = 0 or 1. # dictates which direction rocking motion will start with.
+      if (Motion == 0) {  //rock the robot left and then right
+        while (runningRandomMotion) {  //WHILE loop may rerun several times depending on random-ness for consecutive rocking motions
 
-        }
-        else { // will do a single tilt in random direction
-            Motion = random(4);  // motion = 0, 1, 2, or 3. # dictates which direction base will tilt
-            runningRandomMotion = true;
-            while (runningRandomMotion) {
-                switch (Motion) {
-                    case 0:  //Tilt left
-                        xPos -= speedd;
-                        yPos += speedd;
-                        OverflowCheck();
-                        if ((xPos == 0) && (yPos == 255)) {
-                            // get out of this case and restart RandomMovement
-                            runningRandomMotion = false;
-                        }
-                        break;
-                    case 1:  //Tilt right
-                        xPos += speedd;
-                        yPos -= speedd;
-                        OverflowCheck();
-                        if ((xPos == 255) && (yPos == 0)) {
-                            // get out of this case and restart RandomMovement
-                            runningRandomMotion = false;
-                        }
-                        break;
-                    case 2:  //Tilt forward
-                        xPos -= speedd;
-                        yPos -= speedd;
-                        OverflowCheck();
-                        if ((xPos == AngleMin) && (yPos == AngleMin)) {
-                            // get out of this case and restart RandomMovement
-                            runningRandomMotion = false;
-                        }
-                        break;
-                    case 3:  //Tilt back
-                        xPos += speedd;
-                        yPos += speedd;
-                        OverflowCheck();
-                        if ((xPos == AngleMax) && (yPos == AngleMax)) {
-                            // get out of this case and restart RandomMovement
-                            runningRandomMotion = false;
-                        }
-                        break;
-                }
-                CheckForChange();
-            if (Change){
-                DriverPinOut();
+          //tilting left code
+          xPos -= speedd;
+          yPos += speedd;
+          OverflowCheck();
+          CheckForChange();
+          if (Change) {
+            DriverPinOut();
+          }
+          if ((xPos == 0) && (yPos == 255)) {
+            // get robot back to neutral position and begin tilting to other side
+            Reset();
+            Change = true;
+            doingAltTilt = true;
+          }
+
+          //tilting right code
+          while (doingAltTilt) {
+            xPos += speedd;
+            yPos -= speedd;
+            OverflowCheck();
+            CheckForChange();
+            if (Change) {
+              DriverPinOut();
             }
+            if ((xPos == 255) && (yPos == 0)) {
+              // get robot back to neutral position AND USE RANDOM-NESS TO DETERMINE IF ROBOT WILL MAKE ANOTHER ROCKING MOTION
+              Reset();
+              Change = true;
+              doingAltTilt = false;
+              if (random(100) > reRockProb - 1) {  // has 70% chance of rocking left then right again
+                runningRandomMotion = false;  // exits rocking WHILE loop
+              }
             }
+          }
         }
-    Reset();
+      }
+    else if (Motion == 1) {  //rock the robot forward and then back
+        while (runningRandomMotion) {  //WHILE loop has a chance of rerunning several times
+
+          //tilting forward code
+          xPos -= speedd;
+          yPos -= speedd;
+          OverflowCheck();
+          CheckForChange();
+          if (Change) {
+            DriverPinOut();
+          }
+          if ((xPos == 0) && (yPos == 0)) {
+            // get robot back to neutral position and begin tilting to other side
+            Reset();
+            Change = true;
+            doingAltTilt = true;
+          }
+
+          //tilting backwards code
+          while (doingAltTilt) {
+            xPos += speedd;
+            yPos += speedd;
+            OverflowCheckBackwards();
+            CheckForChange();
+            if (Change) {
+              DriverPinOut();
+            }
+            if ((xPos == AngleMax) && (yPos == AngleMax)) {
+              // get robot back to neutral position AND USE RANDOM-NESS TO DETERMINE IF ROBOT WILL MAKE ANOTHER ROCKING MOTION
+              Reset();
+              Change = true;
+              doingAltTilt = false;
+              if (random(100) > reRockProb - 1) {  // has 70% chance of rocking again in same direction
+                runningRandomMotion = false;
+              }
+            }
+          }
+        }
+      }
     }
-    Change = true;
+    else { // will do a single tilt in random direction
+      Motion = random(4);  // motion = 0, 1, 2, or 3. # dictates which direction base will tilt
+      while (runningRandomMotion) {
+        switch (Motion) {
+          case 0:  //Tilt left
+            xPos -= speedd;
+            yPos += speedd;
+            OverflowCheck();
+            if ((xPos == 0) && (yPos == 255)) {
+              // get out of this case and restart RandomMovement
+              runningRandomMotion = false;
+            }
+            break;
+          case 1:  //Tilt right
+            xPos += speedd;
+            yPos -= speedd;
+            OverflowCheck();
+            if ((xPos == 255) && (yPos == 0)) {
+              // get out of this case and restart RandomMovement
+              runningRandomMotion = false;
+            }
+            break;
+          case 2:  //Tilt forward
+            xPos -= speedd;
+            yPos -= speedd;
+            OverflowCheck();
+            if ((xPos == AngleMin) && (yPos == AngleMin)) {
+              // get out of this case and restart RandomMovement
+              runningRandomMotion = false;
+            }
+            break;
+          case 3:  //Tilt back
+            xPos += speedd;
+            yPos += speedd;
+            OverflowCheck();
+            if ((xPos == AngleMax) && (yPos == AngleMax)) {
+              // get out of this case and restart RandomMovement
+              runningRandomMotion = false;
+            }
+            break;
+        }
+      CheckForChange();
+      if (Change){
+          DriverPinOut();
+      }
+      }
+    }
+  Reset();
+  }
+  Change = true;
 }
