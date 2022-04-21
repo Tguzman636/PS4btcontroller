@@ -17,14 +17,14 @@ BTD Btd(&Usb);
 PS4BT PS4(&Btd);        // Already Paired
 
 /*
-States (COLORS?)
+  States (COLORS?)
 
-0 - Joystick        (RED)     R Joystick
-1 - Circular Loop   (BLUE)    □ Button
-2 - Left/Right Loop (GREEN)   O Button
-3 - Front/Back Loop (YELLOW)  X Button
-4 - Bouncing Loop   (PURPLE)  △ Button
-5 - Patient Mode    (ORANGE)  Touchpad
+  0 - Joystick        (RED)     R Joystick
+  1 - Circular Loop   (BLUE)    □ Button
+  2 - Left/Right Loop (GREEN)   O Button
+  3 - Front/Back Loop (YELLOW)  X Button
+  4 - Bouncing Loop   (PURPLE)  △ Button
+  5 - Patient Mode    (ORANGE)  Touchpad
 */
 
 // Bouncing Variables
@@ -51,13 +51,82 @@ int speedd = 1;     // Speed
 int timing = 4;    // Timing [Delay] within the Action function (Not sure if we need it)
 int SpeeddMin = 1;  // Speed Min
 int SpeeddMax = 10; // Speed Max
-int AngleMin = 0;
-int AngleMax = 255-64; // Max Angle
 int counter = 0;
 int delayer = 0;
 bool runningRandomMotion = true;
 bool doingAltTilt = true;
-int reRockProb = 70;
+int reRockProb = 70;  //probability in % that robot will rebound and repeat rocking motion in randomMovement function
+int tiltLevel = 3 // corresponds to what level of intensity the max tilt angle OF PLATFORM is. Ranges from 1 to 3, 3 being the most intense
+int maxBackTiltAngle = 255 - 64; // Max Angle when tilting backwards. Is to be fixed no matter the tilt amplitude bc robot can only tilt 10 deg backwards
+int minForwardTiltAngle = 0;
+int maxSideTiltAngle = 255;
+int minSideTiltAngle = 0;
+int speedLevel = 5;
+int timingIncrement = 5;  //how much we change "timing" variable when increasing/decreasing speed
+
+void increaseTilt() {
+  tiltLevel += 1;
+  if (tiltLevel == 3) {  //these PWM values r all good
+    minForwardTiltAngle = 0;
+    maxSideTiltAngle = 255;
+    minSidetiltAngle = 0;
+  }
+  else {  //PWM values need to be calibrated
+    minForwardTiltAngle = 30;
+    maxSideTiltAngle = 225
+    minSideTiltAngle = 30;
+  }
+}
+
+void decreaseTilt() {
+  tiltLevel -= 1;
+  if (tiltLevel == 2) { //PWM values need to be calibrated
+    minForwardTiltAngle = 30;
+    maxSideTiltAngle = 225
+                       minSideTiltAngle = 30;
+  }
+  else {  //PWM needs calibration
+    minForwardTiltAngle = 60;
+    maxSideTiltAngle = 200;
+    minSideTiltAngle = 60;
+  }
+}
+
+void LeftOverflowCheck() {
+  if (xPos < minSideTiltAngle) {
+    xPos = minSideTiltAngle;
+  }
+  if (yPos > maxSideTiltAngle) {
+    yPos = maxSideTiltAngle;
+  }
+}
+
+void RightOverflowCheck() {
+  if (xPos > maxSideTiltAngle) {
+    xPos = maxSideTiltAngle;
+  }
+  if (yPos < minSideTiltAngle) {
+    yPos = minSideTiltAngle;
+  }
+}
+
+void ForwardOverflowCheck() {
+  if (xPos < minForwardTiltAngle) {
+    xPos = minForwardTiltAngle;
+  }
+  if (yPos < minForwardTiltAngle) {
+    yPos = minForwardTiltAngle;
+  }
+}
+
+void BackOverflowCheck() {
+  if (xPos > maxBackTiltAngle) {
+    xPos = maxBackTiltAngle;
+  }
+  if (yPos > maxBackTiltAngle) {
+    yPos = maxBackTiltAngle;
+  }
+}
 
 void setup() {
   Serial.begin(115200);
@@ -86,29 +155,31 @@ void setup() {
 void loop() {
   Usb.Task();
   ////Serial.print("\r\nLooping");
-      switch(state){
-        case 0:
-          JoystickMovement();
-          break;
-        case 1:
-          CircularMovement();
-          break;
-        case 2:
-          LRMovement();
-          break;
-        case 3:
-          FRMovement();
-          break;
-        case 4:
-          //BounceMovement();
-          RandomMovement();
-          break;
-        case 5:
-          PatientMode();
-          break;
-        default:
-          break;
-      }
+  switch (state) {
+    case 0:  //joystick
+      JoystickMovement();
+      break;
+    case 1:  //cirlce
+      CircularMovement();
+      break;
+    case 2: //cross
+      LRMovement();
+      break;
+    case 3:  //square
+      FBMovement();
+      break;
+    case 4:  //triangle
+      BounceMovement();
+//      RandomMovement();
+      break;
+    case 5: //touchpad
+      PatientMode();
+      break;
+    default:
+      break;
+    case 6: //L1 or R1
+      RandomMovement();
+  }
 }
 
 void CheckForChange() {
@@ -116,69 +187,65 @@ void CheckForChange() {
   //Serial.println(state);
   Usb.Task();
   if (PS4.connected()) {
-  if(((abs(PS4.getAnalogHat(LeftHatX) - 127) > 15) && (abs(PS4.getAnalogHat(LeftHatY) - 127) > 15)) && (state != 0)){
-    state = 0;
-    //Serial.println("Joystick Mode Activated");
-    //PS4.setLed(red, green, blue);
-    Reset();
-  }
-  if((PS4.getButtonClick(SQUARE)) && (state != 1)){
-    state = 1;
-    //PS4.setLed(red, green, blue);
-    //Serial.println("Circular Mode Activated");
-    Reset();
-  } else
-  if((PS4.getButtonClick(CIRCLE))  && (state != 2)){
-     state = 2;
-     //PS4.setLed(red, green, blue);
-     //Serial.println("Left/Right Mode Activated");
-     Reset();
-  } else
-  if((PS4.getButtonClick(CROSS))  && (state != 3)){
-     state = 3;
-     //PS4.setLed(red, green, blue);
-     //Serial.println("Front/Back Mode Activated");
-     Reset();
-  } else
-  if((PS4.getButtonClick(TRIANGLE))  && (state != 4)){
-     state = 4;
-     //PS4.setLed(red, green, blue);
-     //Serial.println("Bounce Mode Activated");
-     Reset();
-  } else
-  if((PS4.getButtonClick(TOUCHPAD))  && (state != 5)){
-    state = 5;
-    //PS4.setLed(red, green, blue);
-    //Serial.println("Patient Mode Activated");
-    Reset();
-  }
-  /*
-  if(PS4.checkDpad(UP)){
-    speedd++;
-    if(speedd > SpeeddMax) {
-      speedd = SpeeddMax;
+    if (((abs(PS4.getAnalogHat(LeftHatX) - 127) > 15) && (abs(PS4.getAnalogHat(LeftHatY) - 127) > 15)) && (state != 0)) {
+      state = 0;
+      //Serial.println("Joystick Mode Activated");
+      //PS4.setLed(red, green, blue);
+      Reset();
+    }
+    if ((PS4.getButtonClick(CIRLCE)) && (state != 1)) {
+      state = 1;
+      //PS4.setLed(red, green, blue);
+      //Serial.println("Circular Mode Activated");
+      Reset();
+    } else if ((PS4.getButtonClick(CROSS))  && (state != 2)) {
+      state = 2;
+      //PS4.setLed(red, green, blue);
+      //Serial.println("Left/Right Mode Activated");
+      Reset();
+    } else if ((PS4.getButtonClick(SQUARE))  && (state != 3)) {
+      state = 3;
+      //PS4.setLed(red, green, blue);
+      //Serial.println("Front/Back Mode Activated");
+      Reset();
+    } else if ((PS4.getButtonClick(TRIANGLE))  && (state != 4)) {
+      state = 4;
+      //PS4.setLed(red, green, blue);
+      //Serial.println("Bounce Mode Activated");
+      Reset();
+    } else if ((PS4.getButtonClick(TOUCHPAD))  && (state != 5)) {
+      state = 5;
+      //PS4.setLed(red, green, blue);
+      //Serial.println("Patient Mode Activated");
+      Reset();
+    } else if ((PS4.getButtonClick(L1)) || (PS$.getButtonClick(R1))){
+      state = 6;
+    } else if ((PS4.getButtonClick(UP))  && (tiltLevel != 3)) {
+      Reset();
+      increaseTilt();
+      state = 0;
+      Serial.println("Max tilt angle increased");
+    } else if ((PS4.getButtonClick(DOWN) && (tiltLevel != 1)) {
+      Reset();
+      decreaseTilt();
+      state = 0;
+      Serial.println("Max tilt angle decreased");
+    } else if((PS5.getButtonClick(RIGHT) && (speedLevel != 5)) {
+      Reset();
+      timing += timingIncrement;
+      Serial.println("Speed increased");
+    } else if((PS5.getButtonClick(Left) && (speedLevel != 1)) {
+      Reset();
+      timing += timingIncrement;
+      Serial.println("Speed increased");
     }
   }
-  if(PS4.checkDpad(DOWN)){
-    speedd--;
-    if(speedd < SpeeddMin) {
-      speedd = SpeeddMin;
-    }
-  }
- */
-  }
-}
-
-void OverflowCheck() {
-    if (yPos < 0) {yPos = 0;}
-    if (xPos < 0) {xPos = 0;}
-    if (yPos > 255) {yPos = 255;}
-    if (xPos > 255) {xPos = 255;} 
 }
 
 void DriverPinOut() {
   if (state != 0) {
-    for (int i=0; i <= delayer ; i++) {
+
+    for (int i = 0; i <= delayer ; i++) {
       if (i == delayer) {
         analogWrite(driverPin1, xPos);
         analogWrite(driverPin2, yPos);
@@ -187,6 +254,12 @@ void DriverPinOut() {
         delay(timing);
       }
     }
+
+    //    could replace above chunk of code (FOR loop) with this maybe?
+    //    delay(timing or something idk);
+    //    analogWrite(driverPin1, xPos);
+    //    analogWrite(driverPin2, yPos);
+
   } else {
     analogWrite(driverPin1, xPos);
     analogWrite(driverPin2, yPos);
@@ -195,7 +268,7 @@ void DriverPinOut() {
 }
 
 void Reset() {
-  while((xPos != 127) || (yPos != 127)) {
+  while ((xPos != 127) || (yPos != 127)) {
     if (xPos < 127) {
       xPos += speedd;
       if (xPos > 127) {
@@ -230,28 +303,34 @@ void Reset() {
 void JoystickMovement() {
   while (Change) {
     if (PS4.getAnalogHat(LeftHatX) > 137) {
-      if ((xPos + yPos) < (185*2)) {
+      if ((xPos + yPos) < (185 * 2)) {
         xPos += speedd;
       }
       yPos -= speedd;
+      RightOverflowCheck();
     }
     if (PS4.getAnalogHat(LeftHatX) < 117) {
-      if ((xPos + yPos) < (185*2)) {
+      if ((xPos + yPos) < (185 * 2)) {
         yPos += speedd;
       }
       xPos -= speedd;
+      LeftOverflowCheck();
     }
     if (PS4.getAnalogHat(LeftHatY) > 137) {
-      if ((xPos + yPos) < (185*2)) {
+      if ((xPos + yPos) < (185 * 2)) {
         xPos += speedd;
         yPos += speedd;
       }
+      ForwardOverflowCheck();
     }
     if (PS4.getAnalogHat(LeftHatY) < 117) {
       xPos -= speedd;
       yPos -= speedd;
     }
-    OverflowCheck();
+    if (PS4.getButtonClick(L3)) { // if L3 is pressed, home the babybot https://blog.artwolf.in/a?ID=ac8ea0a0-d501-4a85-89d7-ad8d3a7d6a62
+      Reset();
+      Change = false;
+    }
     CheckForChange();
     if (Change) {
       DriverPinOut();
@@ -259,15 +338,15 @@ void JoystickMovement() {
   }
 }
 
-void FRMovement() {
+void FBMovement() {
   Motion = 0;
   while (Change) {
-    switch(Motion) {
+    switch (Motion) {
       case 0:   // Nose Down
         xPos -= speedd;
         yPos -= speedd;
-        OverflowCheck();
-        if ((xPos == AngleMin) && (yPos == AngleMin)) {
+        ForwardOverflowCheck();
+        if ((xPos == minForwardTiltAngle) && (yPos == minForwardTiltAngle)) {
           Motion = 1;
           delay(2000);
         }
@@ -275,26 +354,10 @@ void FRMovement() {
       case 1:   // Nose Up
         xPos += speedd;
         yPos += speedd;
-        OverflowCheck();
-        if ((xPos == AngleMax) && (yPos == AngleMax)) {
+        BackOverflowCheck();
+        if ((xPos == maxBackTiltAngle) && (yPos == maxBackTiltAngle)) {
           Motion = 0;
           delay(2000);
-        }
-        break;
-      case 2:   // Left Orientated
-        xPos += speedd;
-        yPos -= speedd;
-        OverflowCheck();
-        if ((xPos == AngleMax) && (yPos == AngleMin)) {
-          //Motion = #;
-        }
-        break;
-      case 3:   // Right Orientated
-        xPos -= speedd;
-        yPos += speedd;
-        OverflowCheck();
-        if ((xPos == AngleMin) && (yPos == AngleMax)) {
-          //Motion = #;
         }
         break;
     }
@@ -309,28 +372,12 @@ void FRMovement() {
 void LRMovement() {
   Motion = 2;
   while (Change) {
-    switch(Motion) {
-      case 0:   // Nose Down
-        xPos -= speedd;
-        yPos -= speedd;
-        OverflowCheck();
-        if ((xPos == 0) && (yPos == 0)) {
-          //Motion = #;
-        }
-        break;
-      case 1:   // Nose Up
-        xPos += speedd;
-        yPos += speedd;
-        OverflowCheck();
-        if ((xPos == 255) && (yPos == 255)) {
-          //Motion = #;
-        }
-        break;
+    switch (Motion) {
       case 2:   // Left Orientated
         xPos += speedd;
         yPos -= speedd;
-        OverflowCheck();
-        if ((xPos == 255) && (yPos == 0)) {
+        LeftOverflowCheck();
+        if ((xPos == maxSideTiltAngle) && (yPos == minSideTiltAngle)) {
           Motion = 3;
           delay(2000);
         }
@@ -338,8 +385,8 @@ void LRMovement() {
       case 3:   // Right Orientated
         xPos -= speedd;
         yPos += speedd;
-        OverflowCheck();
-        if ((xPos == 0) && (yPos == 255)) {
+        RightOverflowCheck();
+        if ((xPos == minSideTiltAngle) && (yPos == maxSideTiltAngle)) {
           Motion = 2;
           delay(2000);
         }
@@ -356,12 +403,12 @@ void LRMovement() {
 void CircularMovement() {
   Motion = 0;
   while (Change) {
-    switch(Motion) {
+    switch (Motion) {
       case 0:   // Nose Down
         xPos -= speedd;
         yPos -= speedd;
-        OverflowCheck();
-        if ((xPos == 0) && (yPos == 0)) {
+        ForwardOverflowCheck();
+        if ((xPos == minForwardTiltAngle) && (yPos == minForwardTiltAngle)) {
           Motion = 2;
           delay(2000);
         }
@@ -373,14 +420,14 @@ void CircularMovement() {
           counter = 0;
         }
         yPos += speedd;
-        OverflowCheck();
-        if (xPos < AngleMax) {
-          xPos = AngleMax;
+        BackOverflowCheck();
+        if (xPos < maxBackTiltAngle) {
+          xPos = maxBackTiltAngle;
         }
-        if (yPos > AngleMax) {
-          yPos = AngleMax;
+        if (yPos > maxBackTiltAngle) {
+          yPos = maxBackTiltAngle;
         }
-        if ((xPos == AngleMax) && (yPos == AngleMax)) {
+        if ((xPos == maxBackTiltAngle) && (yPos == maxBackTiltAngle)) {
           Motion = 3;
           counter = 0;
           delay(2000);
@@ -389,8 +436,8 @@ void CircularMovement() {
       case 2:   // Right Orientated
         xPos += speedd;
         yPos -= speedd;
-        OverflowCheck();
-        if ((xPos == 255) && (yPos == 0)) {
+        RightOverflowCheck();
+        if ((xPos == maxSideTiltAngle) && (yPos == minSideTiltAngle)) {
           Motion = 1;
           delay(2000);
         }
@@ -402,8 +449,8 @@ void CircularMovement() {
           counter = 0;
         }
         xPos -= speedd;
-        OverflowCheck();
-        if ((xPos == 0) && (yPos == 255)) {
+        LeftOverflowCheck();
+        if ((xPos == minSideTiltAngle) && (yPos == maxSideTiltAngle)) {
           Motion = 0;
           counter = 0;
           delay(2000);
@@ -419,7 +466,7 @@ void CircularMovement() {
 }
 
 void PatientMode() {
-  while(Change) {
+  while (Change) {
     // Detect Patient Button Press similiar to Joystick
     CheckForChange();
     if (Change) {
@@ -430,7 +477,7 @@ void PatientMode() {
 }
 
 void BounceMovement() {
-  while(Change){
+  while (Change) {
     Serial.println("this is suppose to be bouncing");
     CheckForChange();
     if (Change) {
@@ -439,15 +486,6 @@ void BounceMovement() {
   }
   bbStepper.step(0);
   Change = true;
-}
-
-void OverflowCheckBackwards() {
-  if (xPos > AngleMax){
-    xPos = AngleMax;
-  }
-  if (yPos > AngleMax){
-    yPos = AngleMax;
-  }
 }
 
 void RandomMovement() {
@@ -462,12 +500,15 @@ void RandomMovement() {
           //tilting left code
           xPos -= speedd;
           yPos += speedd;
-          OverflowCheck();
+          LeftOverflowCheck();
           CheckForChange();
           if (Change) {
             DriverPinOut();
           }
-          if ((xPos == 0) && (yPos == 255)) {
+          else {
+            runningRandomMotion = false;
+          }
+          if ((xPos == minSideTiltAngle) && (yPos == maxSideTiltAngle)) {
             // get robot back to neutral position and begin tilting to other side
             Reset();
             Change = true;
@@ -478,12 +519,15 @@ void RandomMovement() {
           while (doingAltTilt) {
             xPos += speedd;
             yPos -= speedd;
-            OverflowCheck();
+            RightOverflowCheck();
             CheckForChange();
             if (Change) {
               DriverPinOut();
             }
-            if ((xPos == 255) && (yPos == 0)) {
+            else {
+              runningRandomMotion = false;
+            }
+            if ((xPos == maxSideTiltAngle) && (yPos == minSideTiltAngle)) {
               // get robot back to neutral position AND USE RANDOM-NESS TO DETERMINE IF ROBOT WILL MAKE ANOTHER ROCKING MOTION
               Reset();
               Change = true;
@@ -495,18 +539,21 @@ void RandomMovement() {
           }
         }
       }
-    else if (Motion == 1) {  //rock the robot forward and then back
+      else if (Motion == 1) {  //rock the robot forward and then back
         while (runningRandomMotion) {  //WHILE loop has a chance of rerunning several times
 
           //tilting forward code
           xPos -= speedd;
           yPos -= speedd;
-          OverflowCheck();
+          ForwardOverflowCheck();
           CheckForChange();
           if (Change) {
             DriverPinOut();
           }
-          if ((xPos == 0) && (yPos == 0)) {
+          else {
+            runningRandomMotion = false;
+          }
+          if ((xPos == minForwardTiltAngle) && (yPos == minForwardTiltAngle)) {
             // get robot back to neutral position and begin tilting to other side
             Reset();
             Change = true;
@@ -517,12 +564,15 @@ void RandomMovement() {
           while (doingAltTilt) {
             xPos += speedd;
             yPos += speedd;
-            OverflowCheckBackwards();
+            BackOverflowCheck();
             CheckForChange();
             if (Change) {
               DriverPinOut();
             }
-            if ((xPos == AngleMax) && (yPos == AngleMax)) {
+            else {
+              runningRandomMotion = false;
+            }
+            if ((xPos == maxBackTiltAngle) && (yPos == maxBackTiltAngle)) {
               // get robot back to neutral position AND USE RANDOM-NESS TO DETERMINE IF ROBOT WILL MAKE ANOTHER ROCKING MOTION
               Reset();
               Change = true;
@@ -542,8 +592,8 @@ void RandomMovement() {
           case 0:  //Tilt left
             xPos -= speedd;
             yPos += speedd;
-            OverflowCheck();
-            if ((xPos == 0) && (yPos == 255)) {
+            LeftOverflowCheck();
+            if ((xPos == minSideTiltAngle) && (yPos == maxSideTiltAngle)) {
               // get out of this case and restart RandomMovement
               runningRandomMotion = false;
             }
@@ -551,8 +601,8 @@ void RandomMovement() {
           case 1:  //Tilt right
             xPos += speedd;
             yPos -= speedd;
-            OverflowCheck();
-            if ((xPos == 255) && (yPos == 0)) {
+            RightOverflowCheck();
+            if ((xPos == maxSideTiltAngle) && (yPos == minSideTiltAngle)) {
               // get out of this case and restart RandomMovement
               runningRandomMotion = false;
             }
@@ -560,8 +610,8 @@ void RandomMovement() {
           case 2:  //Tilt forward
             xPos -= speedd;
             yPos -= speedd;
-            OverflowCheck();
-            if ((xPos == AngleMin) && (yPos == AngleMin)) {
+            ForwardOverflowCheck();
+            if ((xPos == minForwardTiltAngle) && (yPos == minForwardTiltAngle)) {
               // get out of this case and restart RandomMovement
               runningRandomMotion = false;
             }
@@ -569,20 +619,23 @@ void RandomMovement() {
           case 3:  //Tilt back
             xPos += speedd;
             yPos += speedd;
-            OverflowCheck();
-            if ((xPos == AngleMax) && (yPos == AngleMax)) {
+            BackOverflowCheck();
+            if ((xPos == maxBackTiltAngle) && (yPos == maxBackTiltAngle)) {
               // get out of this case and restart RandomMovement
               runningRandomMotion = false;
             }
             break;
         }
-      CheckForChange();
-      if (Change){
+        CheckForChange();
+        if (Change) {
           DriverPinOut();
-      }
+        }
+        else {
+          runningRandomMotion = false;
+        }
       }
     }
-  Reset();
+    Reset();
   }
   Change = true;
 }
