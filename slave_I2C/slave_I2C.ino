@@ -59,10 +59,14 @@ void requestEvent() {
     response[i] = (byte)answer.charAt(i);
   }
 
-if (response == "Gamebar Onn"){
-  remoteHasControl == false;
+  if (response == "Gamebar Onn") {
+    remoteHasControl == false;
   }
-  
+
+  if (response == "Gamebar Off") {
+    remoteHasControl == true;
+  }
+
   // Send response back to Master
   Wire.write(response, sizeof(response));
 
@@ -72,7 +76,7 @@ if (response == "Gamebar Onn"){
 
 void loop() {
   while (remoteHasControl == false) {
-// set up motion tasks per button on gamebar
-  
+    // set up motion tasks per button on gamebar
+
   }
 }
