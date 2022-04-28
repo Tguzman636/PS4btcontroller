@@ -14,23 +14,26 @@
 #define SLAVE_ADDR 9
 
 // Define Slave answer size
-#define ANSWERSIZE 5
+#define ANSWERSIZE 11
 
 // Define string with response to Master
-String answer = "Hello";
+String answer = "Hello"; // come back to this
+
+// Priority Scheme Paramter
+bool remoteHasControl = true;
 
 void setup() {
 
   // Initialize I2C communications as Slave
   Wire.begin(SLAVE_ADDR);
-  
+
   // Function to run when data requested from master
-  Wire.onRequest(requestEvent); 
-  
+  Wire.onRequest(requestEvent);
+
   // Function to run when data received from master
   Wire.onReceive(receiveEvent);
-  
-  // Setup Serial Monitor 
+
+  // Setup Serial Monitor
   Serial.begin(9600);
   Serial.println("I2C Slave Demonstration");
 }
@@ -41,7 +44,7 @@ void receiveEvent() {
   while (0 < Wire.available()) {
     byte x = Wire.read();
   }
-  
+
   // Print to Serial Monitor
   Serial.println("Receive event");
 }
@@ -50,21 +53,26 @@ void requestEvent() {
 
   // Setup byte variable in the correct size
   byte response[ANSWERSIZE];
-  
+
   // Format answer as array
-  for (byte i=0;i<ANSWERSIZE;i++) {
+  for (byte i = 0; i < ANSWERSIZE; i++) {
     response[i] = (byte)answer.charAt(i);
+  }
+
+if (response == "Gamebar Onn"){
+  remoteHasControl == false;
   }
   
   // Send response back to Master
-  Wire.write(response,sizeof(response));
-  
+  Wire.write(response, sizeof(response));
+
   // Print to Serial Monitor
   Serial.println("Request event");
 }
 
 void loop() {
-
-  // Time delay in loop
-  delay(50);
+  while (remoteHasControl == false) {
+// set up motion tasks per button on gamebar
+  
+  }
 }
