@@ -14,22 +14,11 @@ BTD Btd(&Usb);
 PS4BT PS4(&Btd, PAIR);  // Pairing
 //PS4BT PS4(&Btd);        // Already Paired
 
-/*
-  States (COLORS?)
-  0 - Joystick        (RED)     R Joystick
-  1 - Circular Loop   (BLUE)    □ Button
-  2 - Left/Right Loop (GREEN)   O Button
-  3 - Front/Back Loop (YELLOW)  X Button
-  4 - Bouncing Loop   (PURPLE)  △ Button
-  5 - Patient Mode    (ORANGE)  Touchpad
-*/
-
 // Bouncing Pins
-#define gatePin 6
+#define BouncePin 6
 
 // I2C Coms
 #define SLAVE_ADDR 9    // Slave I2C Address
-#define ANSWERSIZE 5    // Slave Answer Size
 
 // Driver Pins
 #define driverPin1 5    // Left Driver Pin
@@ -62,6 +51,7 @@ int minSideTiltAngle = 0;
 
 void setup() {
   Serial.begin(115200);
+  Serial.println("Startup Done");     
   #if !defined(__MIPSEL__)
     while (!Serial); // Wait for serial port to connect - used on Leonardo, Teensy and other boards with built-in USB CDC serial connection
   #endif
@@ -72,43 +62,56 @@ void setup() {
   // Pin Definition
   pinMode(driverPin1, OUTPUT);
   pinMode(driverPin2, OUTPUT);
-  pinMode(gatePin, OUTPUT);
+  pinMode(BouncePin, OUTPUT);
   analogWrite(driverPin1, LeftPos);
   analogWrite(driverPin2, RightPos);
 
-  // I2C Coms
-  Wire.begin();       // Setup as Master I2C
+  // I2C Communication - MASTER
+  Wire.begin(SLAVE_ADDR);
 
   // Random Seed for randomizer
   randomSeed(millis());
+  Serial.println("Startup Done");
 }
+
+/*
+  States (COLORS?)
+  0 - Joystick        (RED)     L Joystick
+  1 - Circular Loop   (BLUE)    O□ Button
+  2 - Left/Right Loop (GREEN)   X Button
+  3 - Front/Back Loop (YELLOW)  □ Button
+  4 - Bouncing Loop   (PURPLE)  △ Button
+  5 - Homing Reset    ()        Touchpad/L3
+  6 - Random Mode     (ORANGE)  R1/L1
+  7 - Patient Mode    ()        R2/L2
+*/
 
 void loop() {
   Serial.print("\r\nState: ");
   Serial.print(state);
   switch (state) {
-    case 0:  //joystick
+    case 0:   // Joystick
       JoystickMovement();
       break;
-    case 1:  //cirlce
+    case 1:   // Cirlce
       CircularMovement();
       break;
-    case 2: //cross
+    case 2:   // Cross
       LRMovement();
       break;
-    case 3:  //square
+    case 3:   // Square
       FBMovement();
       break;
-    case 4:  //triangle
+    case 4:   // Triangle
       BounceMovement();
       break;
-    case 5: //touchpad
+    case 5:   // Touchpad / L3
       CheckForChange();
       break;
-    case 6: //L1 or R1
+    case 6:   // L1 or R1
       RandomMovement();
       break;
-    case 7: //L2 or R2
+    case 7:   // L2 or R2
       PatientMode();
       break;
     default:
@@ -156,50 +159,13 @@ void OverflowCheck(char Direct) {
   }
 }
 
-/*void LeftOverflowCheck() {
-  if (LeftPos < minSideTiltAngle) {
-    LeftPos = minSideTiltAngle;
-  }
-  if (RightPos > maxSideTiltAngle) {
-    RightPos = maxSideTiltAngle;
-  }
-}
-
-void RightOverflowCheck() {
-  if (LeftPos > maxSideTiltAngle) {
-    LeftPos = maxSideTiltAngle;
-  }
-  if (RightPos < minSideTiltAngle) {
-    RightPos = minSideTiltAngle;
-  }
-}
-
-void ForwardOverflowCheck() {
-  if (LeftPos < minForwardTiltAngle) {
-    LeftPos = minForwardTiltAngle;
-  }
-  if (RightPos < minForwardTiltAngle) {
-    RightPos = minForwardTiltAngle;
-  }
-}
-
-void BackOverflowCheck() {
-  if (LeftPos > maxBackTiltAngle) {
-    LeftPos = maxBackTiltAngle;
-  }
-  if (RightPos > maxBackTiltAngle) {
-    RightPos = maxBackTiltAngle;
-  }
-}*/
-
 void CheckForChange() {
   //Serial.println("Checking for Change");
   Usb.Task();
   if (PS4.connected()) {
     if (((abs(PS4.getAnalogHat(LeftHatX) - 127) > 15) && (abs(PS4.getAnalogHat(LeftHatY) - 127) > 15))) {
       if (state != 0) { state = 0; Reset(); }
-    }
-    if ((PS4.getButtonClick(CIRCLE))) {
+    } else if ((PS4.getButtonClick(CIRCLE))) {
       if (state != 1) { state = 1; Reset(); }
     } else if ((PS4.getButtonClick(CROSS))) {
       if (state != 2) { state = 2; Reset(); }
@@ -221,9 +187,9 @@ void CheckForChange() {
     } else if (PS4.getButtonClick(DOWN)) {
       Reset();
       TiltChange(-1);
-    } else if(PS4.getButtonClick(RIGHT)) {
+    } else if (PS4.getButtonClick(RIGHT)) {
       Serial.println("Speed increased");
-    } else if(PS4.getButtonClick(LEFT)) {
+    } else if (PS4.getButtonClick(LEFT)) {
       Serial.println("Speed decreased");
     }
   }
@@ -236,10 +202,8 @@ void DriverPinOut() {
       if (i == delayer) {
         analogWrite(driverPin1, LeftPos);
         analogWrite(driverPin2, RightPos);
-        delay(timing);
-      } else {
-        delay(timing);
       }
+      delay(timing);
     }
   } else {
     CheckForChange();
@@ -457,168 +421,68 @@ void BounceMovement() {
   while (Change) {
     CheckForChange();
     if (Change) {
-      analogWrite(gatePin, 90);     // Bounce ON
+      analogWrite(BouncePin, 90);     // Bounce ON
     }
   }
-  analogWrite(gatePin, 0);          // Bounce OFF
+  analogWrite(BouncePin, 0);          // Bounce OFF
   Change = true;
 }
 
 void RandomMovement() {
-  Motion = 0;
-  while (Change) {
-    runningRandomMotion = true;
-    if (random(2) == 1) { // has 50/50 chance of occuring. If satisfied, will do rocking motion
-      Motion = random(2); // Motion = 0 or 1. # dictates which direction rocking motion will start with.
-      if (Motion == 0) {  //rock the robot left and then right
-        while (runningRandomMotion) {  //WHILE loop may rerun several times depending on random-ness for consecutive rocking motions
-          //tilting left code
-          LeftPos--;
-          RightPos++;
-          //LeftOverflowCheck();
-          OverflowCheck('L');
-          CheckForChange();
-          if (Change) {
-            DriverPinOut();
-          }
-          else {
-            runningRandomMotion = false;
-          }
-          if ((LeftPos == minSideTiltAngle) && (RightPos == maxSideTiltAngle)) {
-            // get robot back to neutral position and begin tilting to other side
-            Reset();
-            Change = true;
-            doingAltTilt = true;
-          }
+    randomSeed(millis());  // can move this line to setup
+    while (Change) {
+        if (random(2) == -1) { // has 50/50 chance of occuring. If satisfied, will do rocking motion
 
-          //tilting right code
-          while (doingAltTilt) {
-            LeftPos++;
-            RightPos--;
-            //RightOverflowCheck();
-            OverflowCheck('R');
+        }
+        else { // will do a single tilt in random direction
+            Motion = random(4);  // motion = 0, 1, 2, or 3. # dictates which direction base will tilt
+            runningRandomMotion = true;
+            while (runningRandomMotion) {
+                switch (Motion) {
+                    case 0:  //Tilt left
+                        xPos -= speedd;
+                        yPos += speedd;
+                        OverflowCheck();
+                        if ((xPos == 0) && (yPos == 255)) {
+                            // get out of this case and restart RandomMovement
+                            runningRandomMotion = false;
+                        }
+                        break;
+                    case 1:  //Tilt right
+                        xPos += speedd;
+                        yPos -= speedd;
+                        OverflowCheck();
+                        if ((xPos == 255) && (yPos == 0)) {
+                            // get out of this case and restart RandomMovement
+                            runningRandomMotion = false;
+                        }
+                        break;
+                    case 2:  //Tilt forward
+                        xPos -= speedd;
+                        yPos -= speedd;
+                        OverflowCheck();
+                        if ((xPos == AngleMin) && (yPos == AngleMin)) {
+                            // get out of this case and restart RandomMovement
+                            runningRandomMotion = false;
+                        }
+                        break;
+                    case 3:  //Tilt back
+                        xPos += speedd;
+                        yPos += speedd;
+                        OverflowCheck();
+                        if ((xPos == AngleMax) && (yPos == AngleMax)) {
+                            // get out of this case and restart RandomMovement
+                            runningRandomMotion = false;
+                        }
+                        break;
+                }
+            }
             CheckForChange();
-            if (Change) {
-              DriverPinOut();
+            if (Change){
+                DriverPinOut();
             }
-            else {
-              runningRandomMotion = false;
-            }
-            if ((LeftPos == maxSideTiltAngle) && (RightPos == minSideTiltAngle)) {
-              // get robot back to neutral position AND USE RANDOM-NESS TO DETERMINE IF ROBOT WILL MAKE ANOTHER ROCKING MOTION
-              Reset();
-              Change = true;
-              doingAltTilt = false;
-              if (random(100) > reRockProb - 1) {  // has 70% chance of rocking left then right again
-                runningRandomMotion = false;  // exits rocking WHILE loop
-              }
-            }
-          }
         }
-      }
-      else if (Motion == 1) {  //rock the robot forward and then back
-        while (runningRandomMotion) {  //WHILE loop has a chance of rerunning several times
-
-          //tilting forward code
-          LeftPos--;
-          RightPos--;
-          //ForwardOverflowCheck();
-          OverflowCheck('F');
-          CheckForChange();
-          if (Change) {
-            DriverPinOut();
-          }
-          else {
-            runningRandomMotion = false;
-          }
-          if ((LeftPos == minForwardTiltAngle) && (RightPos == minForwardTiltAngle)) {
-            // get robot back to neutral position and begin tilting to other side
-            Reset();
-            Change = true;
-            doingAltTilt = true;
-          }
-
-          //tilting backwards code
-          while (doingAltTilt) {
-            LeftPos++;
-            RightPos++;
-            //BackOverflowCheck();
-            OverflowCheck('B');
-            CheckForChange();
-            if (Change) {
-              DriverPinOut();
-            }
-            else {
-              runningRandomMotion = false;
-            }
-            if ((LeftPos == maxBackTiltAngle) && (RightPos == maxBackTiltAngle)) {
-              // get robot back to neutral position AND USE RANDOM-NESS TO DETERMINE IF ROBOT WILL MAKE ANOTHER ROCKING MOTION
-              Reset();
-              Change = true;
-              doingAltTilt = false;
-              if (random(100) > reRockProb - 1) {  // has 70% chance of rocking again in same direction
-                runningRandomMotion = false;
-              }
-            }
-          }
-        }
-      }
-    }
-    else { // will do a single tilt in random direction
-      Motion = random(4);  // motion = 0, 1, 2, or 3. # dictates which direction base will tilt
-      while (runningRandomMotion) {
-        switch (Motion) {
-          case 0:  //Tilt left
-            LeftPos--;
-            RightPos++;
-            //LeftOverflowCheck();
-            OverflowCheck('L');
-            if ((LeftPos == minSideTiltAngle) && (RightPos == maxSideTiltAngle)) {
-              // get out of this case and restart RandomMovement
-              runningRandomMotion = false;
-            }
-            break;
-          case 1:  //Tilt right
-            LeftPos++;
-            RightPos--;
-            //RightOverflowCheck();
-            OverflowCheck('R');
-            if ((LeftPos == maxSideTiltAngle) && (RightPos == minSideTiltAngle)) {
-              // get out of this case and restart RandomMovement
-              runningRandomMotion = false;
-            }
-            break;
-          case 2:  //Tilt forward
-            LeftPos--;
-            RightPos--;
-            //ForwardOverflowCheck();
-            OverflowCheck('F');
-            if ((LeftPos == minForwardTiltAngle) && (RightPos == minForwardTiltAngle)) {
-              // get out of this case and restart RandomMovement
-              runningRandomMotion = false;
-            }
-            break;
-          case 3:  //Tilt back
-            LeftPos++;
-            RightPos++;
-            //BackOverflowCheck();
-            OverflowCheck('B');
-            if ((LeftPos == maxBackTiltAngle) && (RightPos == maxBackTiltAngle)) {
-              // get out of this case and restart RandomMovement
-              runningRandomMotion = false;
-            }
-            break;
-        }
-        CheckForChange();
-        if (Change) {
-          DriverPinOut();
-        }
-        else {
-          runningRandomMotion = false;
-        }
-      }
-    }
     Reset();
-  }
-  Change = true;
+    }
+    Change = true;
 }
