@@ -440,37 +440,37 @@ void RandomMovement() {
             while (runningRandomMotion) {
                 switch (Motion) {
                     case 0:  //Tilt left
-                        xPos -= speedd;
-                        yPos += speedd;
+                        LeftPos -= speedd;
+                        RightPos += speedd;
                         OverflowCheck();
-                        if ((xPos == 0) && (yPos == 255)) {
+                        if ((LeftPos == 0) && (RightPos == 255)) {
                             // get out of this case and restart RandomMovement
                             runningRandomMotion = false;
                         }
                         break;
                     case 1:  //Tilt right
-                        xPos += speedd;
-                        yPos -= speedd;
+                        LeftPos += speedd;
+                        RightPos -= speedd;
                         OverflowCheck();
-                        if ((xPos == 255) && (yPos == 0)) {
+                        if ((LeftPos == 255) && (RightPos == 0)) {
                             // get out of this case and restart RandomMovement
                             runningRandomMotion = false;
                         }
                         break;
                     case 2:  //Tilt forward
-                        xPos -= speedd;
-                        yPos -= speedd;
+                        LeftPos -= speedd;
+                        RightPos -= speedd;
                         OverflowCheck();
-                        if ((xPos == AngleMin) && (yPos == AngleMin)) {
+                        if ((LeftPos == AngleMin) && (RightPos == AngleMin)) {
                             // get out of this case and restart RandomMovement
                             runningRandomMotion = false;
                         }
                         break;
                     case 3:  //Tilt back
-                        xPos += speedd;
-                        yPos += speedd;
+                        LeftPos += speedd;
+                        RightPos += speedd;
                         OverflowCheck();
-                        if ((xPos == AngleMax) && (yPos == AngleMax)) {
+                        if ((LeftPos == AngleMax) && (RightPos == AngleMax)) {
                             // get out of this case and restart RandomMovement
                             runningRandomMotion = false;
                         }
