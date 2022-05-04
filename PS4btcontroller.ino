@@ -37,7 +37,7 @@ int RightPos = 127;     // Analog Write Vals
 
 // Timing & Angle/Speed Variables
 int timing = 4;         // Timing [Delay] within the Pinout Function (Ideal is 3 & 4)
-int delayer = 0;
+int delayer = 2;
 int speedLevel = 5;
 int timingIncrement = 5;  //how much we change "timing" variable when increasing/decreasing speed
 int tiltLevel = 3; // corresponds to what level of intensity the max tilt angle OF PLATFORM is. Ranges from 1 to 3, 3 being the most intense
@@ -429,60 +429,117 @@ void BounceMovement() {
 }
 
 void RandomMovement() {
-    randomSeed(millis());  // can move this line to setup
-    while (Change) {
-        if (random(2) == -1) { // has 50/50 chance of occuring. If satisfied, will do rocking motion
-
-        }
-        else { // will do a single tilt in random direction
-            Motion = random(4);  // motion = 0, 1, 2, or 3. # dictates which direction base will tilt
-            runningRandomMotion = true;
-            while (runningRandomMotion) {
-                switch (Motion) {
-                    case 0:  //Tilt left
-                        LeftPos -= speedd;
-                        RightPos += speedd;
-                        OverflowCheck();
-                        if ((LeftPos == 0) && (RightPos == 255)) {
-                            // get out of this case and restart RandomMovement
-                            runningRandomMotion = false;
-                        }
-                        break;
-                    case 1:  //Tilt right
-                        LeftPos += speedd;
-                        RightPos -= speedd;
-                        OverflowCheck();
-                        if ((LeftPos == 255) && (RightPos == 0)) {
-                            // get out of this case and restart RandomMovement
-                            runningRandomMotion = false;
-                        }
-                        break;
-                    case 2:  //Tilt forward
-                        LeftPos -= speedd;
-                        RightPos -= speedd;
-                        OverflowCheck();
-                        if ((LeftPos == AngleMin) && (RightPos == AngleMin)) {
-                            // get out of this case and restart RandomMovement
-                            runningRandomMotion = false;
-                        }
-                        break;
-                    case 3:  //Tilt back
-                        LeftPos += speedd;
-                        RightPos += speedd;
-                        OverflowCheck();
-                        if ((LeftPos == AngleMax) && (RightPos == AngleMax)) {
-                            // get out of this case and restart RandomMovement
-                            runningRandomMotion = false;
-                        }
-                        break;
-                }
+  bool ActiveSubMotion = true;
+  Motion = 0;
+  while (Change) {
+    if (random(2) == 1) {
+      Motion = random(4);
+      ActiveSubMotion = true;
+      int tracker = 0;
+      while (ActiveSubMotion) {
+        switch(Motion) {
+          case 0:   // Nose Down
+            LeftPos--;
+            RightPos--;
+            //ForwardOverflowCheck();
+            OverflowCheck('F');
+            if ((LeftPos == minForwardTiltAngle) && (RightPos == minForwardTiltAngle)) {
+              Motion = 1;
+              tracker++;
             }
-            CheckForChange();
-            if (Change){
-                DriverPinOut();
+            break;
+          case 1:   // Nose Up
+            LeftPos++;
+            RightPos++;
+            //BackOverflowCheck();
+            OverflowCheck('B');
+            if ((LeftPos == maxBackTiltAngle) && (RightPos == maxBackTiltAngle)) {
+              Motion = 0;
+              tracker++;
             }
+            break;
+          case 2:   // Left Orientated
+            LeftPos++;
+            RightPos--;
+            //RightOverflowCheck();
+            OverflowCheck('R');
+            if ((LeftPos == maxSideTiltAngle) && (RightPos == minSideTiltAngle)) {
+              Motion = 3;
+              tracker++;
+            }
+            break;
+          case 3:   // Right Orientated
+            LeftPos--;
+            RightPos++;
+            //LeftOverflowCheck();
+            OverflowCheck('L');
+            if ((LeftPos == minSideTiltAngle) && (RightPos == maxSideTiltAngle)) {
+              Motion = 2;
+              tracker++;
+            }
+            break;
         }
-    Reset();
+        CheckForChange();
+        if (Change) {
+          DriverPinOut();
+        } else {
+          ActiveSubMotion = false;
+        }
+        if (tracker == 2) {
+          Reset();
+          ActiveSubMotion = false;
+        }
+      }
+    } else {
+      Motion = random(4);
+      ActiveSubMotion = true;
+      while (ActiveSubMotion) {
+        switch(Motion) {
+          case 0:   // Nose Down
+            LeftPos--;
+            RightPos--;
+            //ForwardOverflowCheck();
+            OverflowCheck('F');
+            if ((LeftPos == minForwardTiltAngle) && (RightPos == minForwardTiltAngle)) {
+              Reset();
+            }
+            break;
+          case 1:   // Nose Up
+            LeftPos++;
+            RightPos++;
+            //BackOverflowCheck();
+            OverflowCheck('B');
+            if ((LeftPos == maxBackTiltAngle) && (RightPos == maxBackTiltAngle)) {
+              Reset();
+            }
+            break;
+          case 2:   // Left Orientated
+            LeftPos++;
+            RightPos--;
+            //RightOverflowCheck();
+            OverflowCheck('R');
+            if ((LeftPos == maxSideTiltAngle) && (RightPos == minSideTiltAngle)) {
+              Reset();
+            }
+            break;
+          case 3:   // Right Orientated
+            LeftPos--;
+            RightPos++;
+            //LeftOverflowCheck();
+            OverflowCheck('L');
+            if ((LeftPos == minSideTiltAngle) && (RightPos == maxSideTiltAngle)) {
+              Reset();
+            }
+            break;
+        }
+        CheckForChange();
+        if (Change) {
+          DriverPinOut();
+        } else {
+          ActiveSubMotion = false;
+        }
+      }
     }
-    Change = true;
+  }
+  Change = true;
 }
