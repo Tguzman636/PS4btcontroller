@@ -113,7 +113,7 @@ void loop() {
       FBMovement();
       break;
     case 4:   // Triangle
-      bounceMovementTimed();
+      bounceMovement();
       break;
     case 5:   // Touchpad / L3
       CheckForChange();
@@ -570,11 +570,11 @@ void bounceMovementTimed() {
     if (Change) {
       analogWrite(BouncePin, 90);     // Bounce ON
     }
-  }
-  analogWrite(BouncePin, 0);
 
-}// Bounce OFF
-Change = true;
+    analogWrite(BouncePin, 0);
+
+  }// Bounce OFF
+  Change = true;
 }
 
 void PatientMode() {
