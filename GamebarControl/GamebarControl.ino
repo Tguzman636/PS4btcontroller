@@ -1,9 +1,7 @@
 // Gamebar Pins
-#define BouncePin 2
-#define LRButtonPin 7
-#define FBButtonPin 8
-
-
+#define LRButtonPin 6
+#define FBButtonPin 7
+#define BouncePin 8
 
 
 void setup() {

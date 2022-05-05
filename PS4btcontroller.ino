@@ -296,6 +296,7 @@ void Reset() {
     }
     DriverPinOut();
   }
+  Change = false;
 }
 
 void JoystickMovement() {
@@ -369,6 +370,9 @@ void FBMovement() {
 }
 
 void FBMovementTimed() {
+  runTime = millis();
+  interval = 10000;
+  if ((unsigned long)runTime - switchTime <= interval){
   Motion = 0;
   while (Change) {
     switch (Motion) {
@@ -391,13 +395,17 @@ void FBMovementTimed() {
         }
         break;
     }
+  }
+    switchTime = runTime;
+  }
     CheckForChange();
     if (Change) {
       DriverPinOut();
     }
-  }
+  
   Change = true;
 }
+
 
 void LRMovement() {
   Motion = 2;
@@ -587,21 +595,21 @@ void PatientMode() {
     if (buttonMode == 0 && inMotion == 0) {
       //Run LR Movement
       inMotion = 1;
-      LRMovementTimed();
+      LRMovement(); //switch to timed later
       inMotion = 0;
     }
 
     if (buttonMode == 1 && inMotion == 0) {
       // Run FB Movement
       inMotion = 1;
-      FBMovementTimed();
+      FBMovement(); //switch to timed later
       inMotion = 0;
     }
 
     if (buttonMode == 2 && inMotion == 0) {
       // Run bounce code
       inMotion = 1;
-      bounceMovementTimed();
+      bounceMovement(); //switch to timed later
       inMotion = 0;
     }
 
