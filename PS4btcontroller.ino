@@ -60,6 +60,7 @@ unsigned long runTime = 0;
 // Gamebar Buttons
 int buttonMode = 10;
 int inMotion = 0;
+int movementCount = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -370,39 +371,39 @@ void FBMovement() {
 }
 
 void FBMovementTimed() {
-  runTime = millis();
-  interval = 10000;
-  if ((unsigned long)runTime - switchTime <= interval){
-  Motion = 0;
-  while (Change) {
-    switch (Motion) {
-      case 0:   // Nose Down
-        LeftPos--;
-        RightPos--;
-        //ForwardOverflowCheck();
-        OverflowCheck('F');
-        if ((LeftPos == minForwardTiltAngle) && (RightPos == minForwardTiltAngle)) {
-          Motion = 1;
-        }
-        break;
-      case 1:   // Nose Up
-        LeftPos++;
-        RightPos++;
-        //BackOverflowCheck();
-        OverflowCheck('B');
-        if ((LeftPos == maxBackTiltAngle) && (RightPos == maxBackTiltAngle)) {
-          Motion = 0;
-        }
-        break;
+  movementCount = 0;
+  if (movementCount < 3) {
+    Motion = 0;
+    while (Change) {
+      switch (Motion) {
+        case 0:   // Nose Down
+          LeftPos--;
+          RightPos--;
+          //ForwardOverflowCheck();
+          OverflowCheck('F');
+          if ((LeftPos == minForwardTiltAngle) && (RightPos == minForwardTiltAngle)) {
+            Motion = 1;
+          }
+          break;
+        case 1:   // Nose Up
+          LeftPos++;
+          RightPos++;
+          //BackOverflowCheck();
+          OverflowCheck('B');
+          if ((LeftPos == maxBackTiltAngle) && (RightPos == maxBackTiltAngle)) {
+            Motion = 0;
+            movementCount++;
+          }
+          break;
+      }
     }
   }
-    switchTime = runTime;
+
+  CheckForChange();
+  if (Change) {
+    DriverPinOut();
   }
-    CheckForChange();
-    if (Change) {
-      DriverPinOut();
-    }
-  
+
   Change = true;
 }
 
@@ -439,27 +440,31 @@ void LRMovement() {
 }
 
 void LRMovementTimed() {
-  Motion = 2;
-  while (Change) {
-    switch (Motion) {
-      case 2:   // Left Orientated
-        LeftPos++;
-        RightPos--;
-        //RightOverflowCheck();
-        OverflowCheck('R');
-        if ((LeftPos == maxSideTiltAngle) && (RightPos == minSideTiltAngle)) {
-          Motion = 3;
-        }
-        break;
-      case 3:   // Right Orientated
-        LeftPos--;
-        RightPos++;
-        //LeftOverflowCheck();
-        OverflowCheck('L');
-        if ((LeftPos == minSideTiltAngle) && (RightPos == maxSideTiltAngle)) {
-          Motion = 2;
-        }
-        break;
+  movementCount = 0;
+  if (movementCount < 3) {
+    Motion = 2;
+    while (Change) {
+      switch (Motion) {
+        case 2:   // Left Orientated
+          LeftPos++;
+          RightPos--;
+          //RightOverflowCheck();
+          OverflowCheck('R');
+          if ((LeftPos == maxSideTiltAngle) && (RightPos == minSideTiltAngle)) {
+            Motion = 3;
+          }
+          break;
+        case 3:   // Right Orientated
+          LeftPos--;
+          RightPos++;
+          //LeftOverflowCheck();
+          OverflowCheck('L');
+          if ((LeftPos == minSideTiltAngle) && (RightPos == maxSideTiltAngle)) {
+            Motion = 2;
+            movementCount++;
+          }
+          break;
+      }
     }
     CheckForChange();
     if (Change) {
@@ -596,7 +601,7 @@ void PatientMode() {
       //Run LR Movement
       inMotion = 1;
       LRMovement(); //switch to timed later
-      inMotion = 0;
+      inMotion = 0; //does it ever switch back to 0 with LR movement untimed? don't think so.
     }
 
     if (buttonMode == 1 && inMotion == 0) {
