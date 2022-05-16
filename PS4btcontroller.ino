@@ -60,7 +60,10 @@ unsigned long runTime = 0;
 // Gamebar Buttons
 int buttonMode = 10;
 int inMotion = 0;
+<<<<<<< Updated upstream
 int movementCount = 0;
+=======
+>>>>>>> Stashed changes
 
 void setup() {
   Serial.begin(115200);
@@ -88,7 +91,7 @@ void setup() {
 /*
   States (COLORS?)
   0 - Joystick        (RED)     L Joystick
-  1 - Circular Loop   (BLUE)    O□ Button
+  1 - Circular Loop   (BLUE)    O Button
   2 - Left/Right Loop (GREEN)   X Button
   3 - Front/Back Loop (YELLOW)  □ Button
   4 - Bouncing Loop   (PURPLE)  △ Button
@@ -117,7 +120,7 @@ void loop() {
       bounceMovement();
       break;
     case 5:   // Touchpad / L3
-      CheckForChange();
+      Idle();
       break;
     case 6:   // L1 or R1
       RandomMovement();
@@ -246,27 +249,28 @@ void CheckForChange() {
       Reset();
       TiltChange(-1);
     } else if (PS4.getButtonClick(RIGHT)) {
+      delayer--;
+      if (delayer < 1) {
+        delayer = 1;
+      }
       Serial.println("Speed increased");
     } else if (PS4.getButtonClick(LEFT)) {
+      delayer++;
+      if (delayer > 5) {
+        delayer = 5;
+      }
       Serial.println("Speed decreased");
     }
   }
 }
 
 void DriverPinOut() {
-  if (state != 0) {
-    for (int i = 0; i <= delayer ; i++) {
-      CheckForChange();
-      if (i == delayer) {
-        analogWrite(driverPin1, LeftPos);
-        analogWrite(driverPin2, RightPos);
-      }
-      delay(timing);
-    }
-  } else {
+  for (int i = 0; i <= delayer ; i++) {
     CheckForChange();
-    analogWrite(driverPin1, LeftPos);
-    analogWrite(driverPin2, RightPos);
+    if (i == delayer) {
+      analogWrite(driverPin1, LeftPos);
+      analogWrite(driverPin2, RightPos);
+    }
     delay(timing);
   }
 }
@@ -298,6 +302,16 @@ void Reset() {
     DriverPinOut();
   }
   Change = false;
+<<<<<<< Updated upstream
+=======
+}
+
+void Idle() {
+  while (Change) {
+    CheckForChange();
+  }
+  Change = true;
+>>>>>>> Stashed changes
 }
 
 void JoystickMovement() {
@@ -337,6 +351,7 @@ void JoystickMovement() {
       DriverPinOut();
     }
   }
+  Change = true;
 }
 
 void FBMovement() {
@@ -548,6 +563,7 @@ void bounceMovement() {
   analogWrite(BouncePin, 0);
 }
 
+<<<<<<< Updated upstream
 void bounceMovementTimed() {
   while (Change) {
     runTime = millis();
@@ -579,9 +595,56 @@ void bounceMovementTimed() {
     }
 
     buttonOld = buttonNew;
+=======
+void PatientMode() {
+  Serial.println("In Patient Mode");
+
+  bool 
+  while (Change) {
+    if (Serial.available()) {
+      buttonMode = Serial.read(); // read one byte from serial buffer and save to buttonMode
+    }
+    // Detect Patient Button Press similiar to Joystick
+    Serial.println("\n");
+    Serial.println(buttonMode);
+    if (buttonMode == 0 && inMotion == 0) {
+      //Run LR Movement
+      inMotion = 1;
+      /*
+       * 
+       * LR Motion
+       * 
+       */
+      inMotion = 0;
+
+    }
+
+    if (buttonMode == 1 && inMotion == 0) {
+      // Run FB Movement
+      inMotion = 1;
+      /*
+       * 
+       * FB Motion
+       * 
+       */
+      inMotion = 0;
+    }
+
+    if (buttonMode == 2 && inMotion == 0) {
+      // Run bounce code
+      inMotion = 1;
+      /*
+       * 
+       * Bounce Code
+       * 
+       */
+      inMotion = 0;
+    }
+
+>>>>>>> Stashed changes
     CheckForChange();
     if (Change) {
-      analogWrite(BouncePin, 90);     // Bounce ON
+      DriverPinOut();
     }
 
     analogWrite(BouncePin, 0);
@@ -655,6 +718,7 @@ void RandomMovement() {
             if ((LeftPos == minForwardTiltAngle) && (RightPos == minForwardTiltAngle)) {
               Motion = 1;
               tracker++;
+              delay(100);
             }
             break;
           case 1:   // Nose Up
@@ -665,6 +729,7 @@ void RandomMovement() {
             if ((LeftPos == maxBackTiltAngle) && (RightPos == maxBackTiltAngle)) {
               Motion = 0;
               tracker++;
+              delay(100);
             }
             break;
           case 2:   // Left Orientated
@@ -675,6 +740,7 @@ void RandomMovement() {
             if ((LeftPos == maxSideTiltAngle) && (RightPos == minSideTiltAngle)) {
               Motion = 3;
               tracker++;
+              delay(100);
             }
             break;
           case 3:   // Right Orientated
@@ -685,6 +751,7 @@ void RandomMovement() {
             if ((LeftPos == minSideTiltAngle) && (RightPos == maxSideTiltAngle)) {
               Motion = 2;
               tracker++;
+              delay(100);
             }
             break;
         }
@@ -695,9 +762,12 @@ void RandomMovement() {
           ActiveSubMotion = false;
         }
         if (tracker == 2) {
-          Reset();
-          ActiveSubMotion = false;
-        }
+          if (rand(100)-1 < reRockProb)
+            tracker = 0;
+          } else {
+            Reset();
+            ActiveSubMotion = false;
+          }
       }
     } else {
       Motion = random(4);
@@ -711,6 +781,7 @@ void RandomMovement() {
             OverflowCheck('F');
             if ((LeftPos == minForwardTiltAngle) && (RightPos == minForwardTiltAngle)) {
               Reset();
+              delay(100);
             }
             break;
           case 1:   // Nose Up
@@ -720,6 +791,7 @@ void RandomMovement() {
             OverflowCheck('B');
             if ((LeftPos == maxBackTiltAngle) && (RightPos == maxBackTiltAngle)) {
               Reset();
+              delay(100);
             }
             break;
           case 2:   // Left Orientated
@@ -729,6 +801,7 @@ void RandomMovement() {
             OverflowCheck('R');
             if ((LeftPos == maxSideTiltAngle) && (RightPos == minSideTiltAngle)) {
               Reset();
+              delay(100);
             }
             break;
           case 3:   // Right Orientated
@@ -738,6 +811,7 @@ void RandomMovement() {
             OverflowCheck('L');
             if ((LeftPos == minSideTiltAngle) && (RightPos == maxSideTiltAngle)) {
               Reset();
+              delay(100);
             }
             break;
         }
