@@ -600,14 +600,14 @@ void PatientMode() {
     if (buttonMode == 0 && inMotion == 0) {
       //Run LR Movement
       inMotion = 1;
-      LRMovement(); //switch to timed later
+      LRMovementTimed();
       inMotion = 0; //does it ever switch back to 0 with LR movement untimed? don't think so.
     }
 
     if (buttonMode == 1 && inMotion == 0) {
       // Run FB Movement
       inMotion = 1;
-      FBMovement(); //switch to timed later
+      FBMovementTimed();
       inMotion = 0;
     }
 
