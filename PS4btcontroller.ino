@@ -60,10 +60,7 @@ unsigned long runTime = 0;
 // Gamebar Buttons
 int buttonMode = 10;
 int inMotion = 0;
-<<<<<<< Updated upstream
-int movementCount = 0;
-=======
->>>>>>> Stashed changes
+int movementCount = 10;
 
 void setup() {
   Serial.begin(115200);
@@ -200,11 +197,13 @@ void CheckForChange() {
     if (((abs(PS4.getAnalogHat(LeftHatX) - 127) > 15) && (abs(PS4.getAnalogHat(LeftHatY) - 127) > 15))) {
       if (state != 0) {
         state = 0;
+        inMotion = 0;
         Reset();
       }
     } else if ((PS4.getButtonClick(CIRCLE))) {
       if (state != 1) {
         state = 1;
+        inMotion = 0;
         Reset();
       }
     } else if ((PS4.getButtonClick(CROSS))) {
@@ -215,6 +214,7 @@ void CheckForChange() {
     } else if ((PS4.getButtonClick(SQUARE))) {
       if (state != 3) {
         state = 3;
+        inMotion = 0;
         Reset();
       }
     } else if ((PS4.getButtonClick(TRIANGLE))) {
@@ -225,16 +225,19 @@ void CheckForChange() {
     } else if ((PS4.getButtonClick(TOUCHPAD))) {
       if (state != 5) {
         state = 5;
+        inMotion = 0;
         Reset();
       }
     } else if (PS4.getButtonClick(L3)) {
       if (state != 5) {
         state = 5;
+        inMotion = 0;
         Reset();
       }
     } else if ((PS4.getButtonClick(L1)) || (PS4.getButtonClick(R1))) {
       if (state != 6) {
         state = 6;
+        inMotion = 0;
         Reset();
       }
     } else if ((PS4.getButtonClick(L2)) || (PS4.getButtonClick(R2))) {
@@ -302,8 +305,6 @@ void Reset() {
     DriverPinOut();
   }
   Change = false;
-<<<<<<< Updated upstream
-=======
 }
 
 void Idle() {
@@ -311,7 +312,6 @@ void Idle() {
     CheckForChange();
   }
   Change = true;
->>>>>>> Stashed changes
 }
 
 void JoystickMovement() {
@@ -387,9 +387,9 @@ void FBMovement() {
 
 void FBMovementTimed() {
   movementCount = 0;
-  if (movementCount < 3) {
-    Motion = 0;
-    while (Change) {
+  while (inMotion) {
+    if (movementCount < 3) {
+      Motion = 0;
       switch (Motion) {
         case 0:   // Nose Down
           LeftPos--;
@@ -411,15 +411,12 @@ void FBMovementTimed() {
           }
           break;
       }
+    CheckForChange();
+    DriverPinOut();
+    } else {
+      inMotion = 0;
     }
   }
-
-  CheckForChange();
-  if (Change) {
-    DriverPinOut();
-  }
-
-  Change = true;
 }
 
 
@@ -456,14 +453,13 @@ void LRMovement() {
 
 void LRMovementTimed() {
   movementCount = 0;
-  if (movementCount < 3) {
-    Motion = 2;
-    while (Change) {
+  while (inMotion) {
+    if (movementCount < 3) {
+      Motion = 2;
       switch (Motion) {
         case 2:   // Left Orientated
           LeftPos++;
           RightPos--;
-          //RightOverflowCheck();
           OverflowCheck('R');
           if ((LeftPos == maxSideTiltAngle) && (RightPos == minSideTiltAngle)) {
             Motion = 3;
@@ -472,7 +468,6 @@ void LRMovementTimed() {
         case 3:   // Right Orientated
           LeftPos--;
           RightPos++;
-          //LeftOverflowCheck();
           OverflowCheck('L');
           if ((LeftPos == minSideTiltAngle) && (RightPos == maxSideTiltAngle)) {
             Motion = 2;
@@ -480,14 +475,15 @@ void LRMovementTimed() {
           }
           break;
       }
-    }
     CheckForChange();
-    if (Change) {
-      DriverPinOut();
+    DriverPinOut();
+    } else {
+      inMotion = 0;
     }
   }
-  Change = true;
+
 }
+
 
 void CircularMovement() {
   int counter = 0;        // For smooth transition of back motion
@@ -563,28 +559,15 @@ void bounceMovement() {
   analogWrite(BouncePin, 0);
 }
 
-<<<<<<< Updated upstream
 void bounceMovementTimed() {
   while (Change) {
     runTime = millis();
-    Serial.print("Button state is: ");
-    Serial.println(buttonNew);
-    Serial.print("Motor state is: ");
-    Serial.println(motorState);
     if (buttonMode == 2)
     {
 
-      Serial.print("Button state is: ");
-      Serial.println(buttonNew);
-      Serial.print("Motor state is: ON");
-      Serial.println("------------");
       analogWrite(gatePin, 90);
       if ((unsigned long)runTime - switchTime >= interval)
       {
-        Serial.print("Button state is: ");
-        Serial.println(buttonNew);
-        Serial.print("Motor state is: OFF");
-        Serial.println("------------");
         analogWrite(gatePin, 0);
         motorState = 0;
         switchTime = runTime;
@@ -595,56 +578,9 @@ void bounceMovementTimed() {
     }
 
     buttonOld = buttonNew;
-=======
-void PatientMode() {
-  Serial.println("In Patient Mode");
-
-  bool 
-  while (Change) {
-    if (Serial.available()) {
-      buttonMode = Serial.read(); // read one byte from serial buffer and save to buttonMode
-    }
-    // Detect Patient Button Press similiar to Joystick
-    Serial.println("\n");
-    Serial.println(buttonMode);
-    if (buttonMode == 0 && inMotion == 0) {
-      //Run LR Movement
-      inMotion = 1;
-      /*
-       * 
-       * LR Motion
-       * 
-       */
-      inMotion = 0;
-
-    }
-
-    if (buttonMode == 1 && inMotion == 0) {
-      // Run FB Movement
-      inMotion = 1;
-      /*
-       * 
-       * FB Motion
-       * 
-       */
-      inMotion = 0;
-    }
-
-    if (buttonMode == 2 && inMotion == 0) {
-      // Run bounce code
-      inMotion = 1;
-      /*
-       * 
-       * Bounce Code
-       * 
-       */
-      inMotion = 0;
-    }
-
->>>>>>> Stashed changes
     CheckForChange();
     if (Change) {
-      DriverPinOut();
+      analogWrite(BouncePin, 90);     // Bounce ON
     }
 
     analogWrite(BouncePin, 0);
@@ -654,41 +590,31 @@ void PatientMode() {
 }
 
 void PatientMode() {
-  if (Serial.available()) {
-    buttonMode = Serial.read(); // read one byte from serial buffer and save to buttonMode
-  }
-
+  Serial.println("In Patient Mode");
   while (Change) {
+    if (Serial.available()) {
+      buttonMode = Serial.read(); // read one byte from serial buffer and save to buttonMode
+    }
+    Serial.println("Serial.read = ");
+    Serial.print(buttonMode);
     // Detect Patient Button Press similiar to Joystick
     if (buttonMode == 0 && inMotion == 0) {
       //Run LR Movement
       inMotion = 1;
       LRMovementTimed();
-      inMotion = 0; //does it ever switch back to 0 with LR movement untimed? don't think so.
     }
 
     if (buttonMode == 1 && inMotion == 0) {
       // Run FB Movement
       inMotion = 1;
       FBMovementTimed();
-      inMotion = 0;
     }
 
     if (buttonMode == 2 && inMotion == 0) {
       // Run bounce code
       inMotion = 1;
-      bounceMovement(); //switch to timed later
-      inMotion = 0;
+      bounceMovementTimed();
     }
-
-    // right now, will run infinitely, not timed motion
-    //    while (inMotion) {
-    //      if (digitalRead(LRButtonPin) == HIGH) {
-    //        Movement()
-    //        if (reach to the end)
-    //          inMotion = 0;
-    //      }
-    //    }
 
     CheckForChange();
     if (Change) {
@@ -762,7 +688,7 @@ void RandomMovement() {
           ActiveSubMotion = false;
         }
         if (tracker == 2) {
-          if (rand(100)-1 < reRockProb)
+          if (random(100)-1 < reRockProb)
             tracker = 0;
           } else {
             Reset();
